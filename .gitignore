@@ -11,6 +11,8 @@ playwright-report/
 test-results/
 coverage/
 *.tsbuildinfo
+/Full Logo.jpg
+/Logo only.jpg
 .impeccable/questions/
 .impeccable/mocks/
 .impeccable/review/
