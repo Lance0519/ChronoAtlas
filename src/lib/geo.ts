@@ -11,16 +11,39 @@ export function isValidCoordinate(latitude: number, longitude: number): boolean 
   );
 }
 
-/** A wrapped viewport (minLon > maxLon) becomes two envelopes across the date line. */
+function wrapLongitude(value: number): number {
+  if (value >= -180 && value <= 180) return value;
+  return ((((value + 180) % 360) + 360) % 360) - 180;
+}
+
+/**
+ * A wrapped viewport (minLon > maxLon) becomes two envelopes across the date line.
+ * MapLibre can report longitudes past ±180, so normalize before splitting.
+ */
 export function buildViewportEnvelopes(bounds: ViewportBounds): ViewportBounds[] {
   const { minLat, minLon, maxLat, maxLon } = bounds;
-  if (!isValidCoordinate(minLat, minLon) || !isValidCoordinate(maxLat, maxLon) || minLat > maxLat) {
+  if (
+    !Number.isFinite(minLat) ||
+    !Number.isFinite(maxLat) ||
+    !Number.isFinite(minLon) ||
+    !Number.isFinite(maxLon) ||
+    minLat < -90 ||
+    maxLat > 90 ||
+    minLat > maxLat
+  ) {
     return [];
   }
-  if (minLon <= maxLon) return [bounds];
+  if (Math.abs(maxLon - minLon) >= 360) {
+    return [{ minLat, minLon: -180, maxLat, maxLon: 180 }];
+  }
+  const wrappedMinLon = wrapLongitude(minLon);
+  const wrappedMaxLon = wrapLongitude(maxLon);
+  if (wrappedMinLon <= wrappedMaxLon) {
+    return [{ minLat, minLon: wrappedMinLon, maxLat, maxLon: wrappedMaxLon }];
+  }
   return [
-    { minLat, minLon, maxLat, maxLon: 180 },
-    { minLat, minLon: -180, maxLat, maxLon },
+    { minLat, minLon: wrappedMinLon, maxLat, maxLon: 180 },
+    { minLat, minLon: -180, maxLat, maxLon: wrappedMaxLon },
   ];
 }
 

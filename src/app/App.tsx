@@ -57,24 +57,27 @@ function Workspace() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              aria-label="Guide"
               data-tour="guide"
               onClick={() => setTourOpen(true)}
               className="inline-flex min-h-11 items-center gap-1.5 border border-rule bg-paper px-3 py-1.5 text-xs text-ink hover:border-ink md:min-h-9"
             >
               <HelpCircle aria-hidden="true" size={14} strokeWidth={1.5} />
-              <span>Guide</span>
+              <span className="hidden sm:inline">Guide</span>
             </button>
             <button
               type="button"
+              aria-label="Import Wikipedia"
               data-tour="import"
               onClick={() => setImportOpen(true)}
               className="inline-flex min-h-11 items-center gap-1.5 border border-rule bg-sheet px-3 py-1.5 text-xs text-ink hover:border-ink hover:bg-paper md:min-h-9"
             >
               <BookPlus aria-hidden="true" size={14} strokeWidth={1.5} />
-              <span>Import Wikipedia</span>
+              <span className="hidden sm:inline">Import Wikipedia</span>
             </button>
             <button
               type="button"
+              aria-label={authButtonLabel}
               data-tour="archive"
               onClick={() => setAuthOpen(true)}
               className="inline-flex min-h-11 max-w-[220px] items-center gap-1.5 border border-rule bg-sheet px-3 py-1.5 text-xs text-muted hover:border-ink hover:text-ink md:min-h-9"
@@ -91,7 +94,7 @@ function Workspace() {
               ) : (
                 <UserRound aria-hidden="true" size={14} strokeWidth={1.5} className="shrink-0" />
               )}
-              <span className="truncate">{authButtonLabel}</span>
+              <span className="hidden truncate sm:inline">{authButtonLabel}</span>
             </button>
           </div>
         }

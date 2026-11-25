@@ -101,10 +101,26 @@ describe("viewport bounds", () => {
     expect(envelopes[1]).toEqual({ minLat: -10, minLon: -180, maxLat: 10, maxLon: -170 });
   });
 
-  it("rejects impossible or out-of-range bounds", () => {
+  it("rejects impossible latitude bounds", () => {
     expect(buildViewportEnvelopes({ minLat: 20, minLon: 0, maxLat: -20, maxLon: 10 })).toEqual([]);
     expect(buildViewportEnvelopes({ minLat: -95, minLon: 0, maxLat: 10, maxLon: 10 })).toEqual([]);
-    expect(buildViewportEnvelopes({ minLat: 0, minLon: 0, maxLat: 10, maxLon: 190 })).toEqual([]);
+  });
+
+  it("normalizes longitudes beyond ±180 reported by MapLibre", () => {
+    const envelopes = buildViewportEnvelopes({
+      minLat: -32.8,
+      minLon: 57.2,
+      maxLat: 53.2,
+      maxLon: 184.8,
+    });
+    expect(envelopes).toHaveLength(2);
+    expect(envelopes[0].minLon).toBe(57.2);
+    expect(envelopes[0].maxLon).toBe(180);
+    expect(envelopes[1].minLon).toBe(-180);
+    expect(envelopes[1].maxLon).toBeCloseTo(-175.2);
+    expect(
+      entryInAnyBounds(makeEntry({ origin: { latitude: 14.6, longitude: 120.98 } }), envelopes),
+    ).toBe(true);
   });
 
   it("matches an origin or current location including across wrapped bounds", () => {

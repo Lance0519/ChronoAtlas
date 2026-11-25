@@ -16,6 +16,7 @@ const STUB_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="120" heig
 const WIKI_TEST_URL = "https://en.wikipedia.org/wiki/Pasig_River_Heritage_Test";
 
 async function installOfflineMocks(page: Page) {
+  await page.addInitScript(() => localStorage.setItem("chronoatlas.tour.v1", "done"));
   await page.route("https://tiles.openfreemap.org/styles/liberty", async (route) => {
     await route.fulfill({
       status: 200,
@@ -317,6 +318,10 @@ test.describe("ChronoAtlas critical user journeys", () => {
     await page.setViewportSize({ width: 375, height: 746 });
     const mobileTabs = page.locator('nav[aria-label="Panes"]');
     await expect(mobileTabs).toBeVisible();
+    const headerHeight = await page
+      .locator("header")
+      .evaluate((el) => el.getBoundingClientRect().height);
+    expect(headerHeight).toBeLessThanOrEqual(60);
     await expectNoHorizontalOverflow(page);
 
     await mobileTabs.getByRole("button", { name: "Records" }).click();
@@ -335,6 +340,17 @@ test.describe("ChronoAtlas critical user journeys", () => {
 
     await mobileTabs.getByRole("button", { name: "Map" }).click();
     await expect(page.locator('section[aria-label="Map canvas"]')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    // Wide desktop: map fills the free space until a record opens the third pane.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const columnCount = () =>
+      page
+        .locator("main > div")
+        .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
+    expect(await columnCount()).toBe(2);
+    await page.locator("button[data-entry-id]").first().click();
+    expect(await columnCount()).toBe(3);
     await expectNoHorizontalOverflow(page);
 
     expect(consoleErrors).toEqual([]);

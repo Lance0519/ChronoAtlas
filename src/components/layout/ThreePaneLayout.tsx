@@ -37,7 +37,7 @@ export function ThreePaneLayout({
       </a>
       <header
         data-tour="header"
-        className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-2"
+        className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-1.5"
       >
         <div className="flex items-baseline gap-3">
           <h1 className="font-display text-[22px] leading-none tracking-tight">ChronoAtlas</h1>
@@ -55,7 +55,13 @@ export function ThreePaneLayout({
       </header>
 
       <main id="main" className="relative min-h-0 flex-1 scroll-mt-4">
-        <div className="grid h-full grid-cols-1 grid-rows-1 overflow-hidden md:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)_420px]">
+        <div
+          className={`grid h-full grid-cols-1 grid-rows-1 overflow-hidden md:grid-cols-[320px_minmax(0,1fr)] ${
+            isContextDrawerOpen
+              ? "xl:grid-cols-[340px_minmax(0,1fr)_420px]"
+              : "xl:grid-cols-[340px_minmax(0,1fr)]"
+          }`}
+        >
           <div
             className={`${mobilePane === "feed" ? "flex" : "hidden"} min-h-0 pb-[calc(3rem+env(safe-area-inset-bottom))] md:flex md:pb-0`}
           >
