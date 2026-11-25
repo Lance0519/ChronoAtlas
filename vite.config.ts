@@ -23,6 +23,9 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    allowedHosts: [".trycloudflare.com"],
+  },
   test: {
     environment: "jsdom",
     globals: true,
