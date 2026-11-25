@@ -48,6 +48,7 @@ const steps = [
 
 export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [step, setStep] = useState(0);
+  const [spotlight, setSpotlight] = useState<DOMRect | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
 
@@ -61,18 +62,30 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
-    document.querySelectorAll(".tour-highlight").forEach((element) => {
-      element.classList.remove("tour-highlight");
-    });
-    const targetName = steps[step].target;
-    if (!targetName) return;
-    const target = document.querySelector<HTMLElement>(`[data-tour="${targetName}"]`);
-    if (target) {
-      target.classList.add("tour-highlight");
-      target.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    if (!open) {
+      setSpotlight(null);
+      return;
     }
-    return () => target?.classList.remove("tour-highlight");
+    const update = () => {
+      const targetName = steps[step].target;
+      const target = targetName
+        ? document.querySelector<HTMLElement>(`[data-tour="${targetName}"]`)
+        : null;
+      setSpotlight(target ? target.getBoundingClientRect() : null);
+    };
+    update();
+    const targetName = steps[step].target;
+    if (targetName) {
+      document
+        .querySelector<HTMLElement>(`[data-tour="${targetName}"]`)
+        ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    }
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
   }, [open, step]);
 
   const finish = () => {
@@ -95,81 +108,127 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
 
   const current = steps[step];
   return (
-    <div
-      ref={dialogRef}
-      role="dialog"
-      aria-label="ChronoAtlas quick tour"
-      tabIndex={-1}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") finish();
-        if (event.key === "ArrowRight") {
-          event.preventDefault();
-          next();
-        }
-        if (event.key === "ArrowLeft") {
-          event.preventDefault();
-          back();
-        }
-      }}
-      className="fixed bottom-4 left-4 z-[70] w-[min(92vw,420px)] border border-ochre bg-sheet p-4 shadow-[0_12px_32px_rgba(29,28,25,0.18)]"
-    >
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <span className="caption-label">
-          Quick tour · {step + 1} of {steps.length}
-        </span>
-        <button
-          type="button"
-          aria-label="Close tour"
-          onClick={finish}
-          className="grid size-8 place-items-center border border-rule text-muted hover:border-ink hover:text-ink"
-        >
-          <X aria-hidden="true" size={14} strokeWidth={1.5} />
-        </button>
-      </div>
-
-      <h2 className="font-display text-[24px] leading-tight text-ink">{current.title}</h2>
-      <p aria-live="polite" className="mt-2 text-sm leading-relaxed text-muted">
-        {current.body}
-      </p>
-
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={finish}
-          className="text-xs text-muted underline underline-offset-4 hover:text-ink"
-        >
-          Skip tour
-        </button>
-        <div className="flex items-center gap-2">
-          {step > 0 && (
-            <button
-              type="button"
-              onClick={back}
-              className="inline-flex min-h-9 items-center gap-1 border border-rule px-2 text-xs text-ink hover:border-ink"
-            >
-              <ArrowLeft aria-hidden="true" size={13} strokeWidth={1.5} />
-              Back
-            </button>
-          )}
+    <>
+      {spotlight && (
+        <>
+          <div
+            aria-hidden="true"
+            className="tour-dim"
+            style={{ top: 0, left: 0, right: 0, height: Math.max(0, spotlight.top) }}
+          />
+          <div
+            aria-hidden="true"
+            className="tour-dim"
+            style={{ top: Math.max(0, spotlight.bottom), left: 0, right: 0, bottom: 0 }}
+          />
+          <div
+            aria-hidden="true"
+            className="tour-dim"
+            style={{
+              top: Math.max(0, spotlight.top),
+              left: 0,
+              width: Math.max(0, spotlight.left),
+              height: Math.max(0, spotlight.height),
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="tour-dim"
+            style={{
+              top: Math.max(0, spotlight.top),
+              left: Math.max(0, spotlight.right),
+              right: 0,
+              height: Math.max(0, spotlight.height),
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="tour-halo"
+            style={{
+              top: spotlight.top - 4,
+              left: spotlight.left - 4,
+              width: spotlight.width + 8,
+              height: spotlight.height + 8,
+            }}
+          />
+        </>
+      )}
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-label="ChronoAtlas quick tour"
+        tabIndex={-1}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") finish();
+          if (event.key === "ArrowRight") {
+            event.preventDefault();
+            next();
+          }
+          if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            back();
+          }
+        }}
+        className="fixed bottom-4 left-4 z-[70] w-[min(92vw,420px)] border border-ochre bg-sheet p-4 shadow-[0_12px_32px_rgba(29,28,25,0.18)]"
+      >
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="caption-label">
+            Quick tour · {step + 1} of {steps.length}
+          </span>
           <button
             type="button"
-            onClick={next}
-            className="inline-flex min-h-9 items-center gap-1 border border-ink bg-ink px-3 text-xs text-sheet hover:bg-[#2e2a24]"
+            aria-label="Close tour"
+            onClick={finish}
+            className="grid size-8 place-items-center border border-rule text-muted hover:border-ink hover:text-ink"
           >
-            {step === steps.length - 1 ? (
-              <>
-                <Check aria-hidden="true" size={13} strokeWidth={1.5} />
-                Done
-              </>
-            ) : (
-              <>
-                Next
-                <ArrowRight aria-hidden="true" size={13} strokeWidth={1.5} />
-              </>
-            )}
+            <X aria-hidden="true" size={14} strokeWidth={1.5} />
           </button>
         </div>
+
+        <h2 className="font-display text-[24px] leading-tight text-ink">{current.title}</h2>
+        <p aria-live="polite" className="mt-2 text-sm leading-relaxed text-muted">
+          {current.body}
+        </p>
+
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={finish}
+            className="text-xs text-muted underline underline-offset-4 hover:text-ink"
+          >
+            Skip tour
+          </button>
+          <div className="flex items-center gap-2">
+            {step > 0 && (
+              <button
+                type="button"
+                onClick={back}
+                className="inline-flex min-h-9 items-center gap-1 border border-rule px-2 text-xs text-ink hover:border-ink"
+              >
+                <ArrowLeft aria-hidden="true" size={13} strokeWidth={1.5} />
+                Back
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={next}
+              className="inline-flex min-h-9 items-center gap-1 border border-ink bg-ink px-3 text-xs text-sheet hover:bg-[#2e2a24]"
+            >
+              {step === steps.length - 1 ? (
+                <>
+                  <Check aria-hidden="true" size={13} strokeWidth={1.5} />
+                  Done
+                </>
+              ) : (
+                <>
+                  Next
+                  <ArrowRight aria-hidden="true" size={13} strokeWidth={1.5} />
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

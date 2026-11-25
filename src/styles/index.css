@@ -129,10 +129,26 @@
   }
 }
 
-.tour-highlight {
-  outline: 2px solid var(--color-ochre);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 6px rgb(154 91 36 / 12%);
+.tour-dim {
+  position: fixed;
+  z-index: 60;
+  background: rgb(29 28 25 / 55%);
+  pointer-events: none;
+}
+
+.tour-halo {
+  position: fixed;
+  z-index: 61;
+  border: 2px solid var(--color-ochre);
+  box-shadow:
+    0 0 0 4px rgb(251 249 243 / 90%),
+    0 0 22px rgb(154 91 36 / 45%);
+  pointer-events: none;
+  transition:
+    top 180ms ease,
+    left 180ms ease,
+    width 180ms ease,
+    height 180ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
