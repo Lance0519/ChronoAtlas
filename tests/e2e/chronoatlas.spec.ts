@@ -15,8 +15,10 @@ const STUB_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="120" heig
 
 const WIKI_TEST_URL = "https://en.wikipedia.org/wiki/Pasig_River_Heritage_Test";
 
-async function installOfflineMocks(page: Page) {
-  await page.addInitScript(() => localStorage.setItem("chronoatlas.tour.v1", "done"));
+async function installOfflineMocks(page: Page, skipTour = true) {
+  if (skipTour) {
+    await page.addInitScript(() => localStorage.setItem("chronoatlas.tour.v1", "done"));
+  }
   await page.route("https://tiles.openfreemap.org/styles/liberty", async (route) => {
     await route.fulfill({
       status: 200,
@@ -352,6 +354,64 @@ test.describe("ChronoAtlas critical user journeys", () => {
     await page.locator("button[data-entry-id]").first().click();
     expect(await columnCount()).toBe(3);
     await expectNoHorizontalOverflow(page);
+
+    expect(consoleErrors).toEqual([]);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("mobile quick tour stays above the pane nav with 44px controls", async ({ page }) => {
+    const consoleErrors: string[] = [];
+    const pageErrors: string[] = [];
+
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        consoleErrors.push(msg.text());
+      }
+    });
+    page.on("pageerror", (err) => {
+      pageErrors.push(err.message);
+    });
+
+    await installOfflineMocks(page, false);
+    await page.setViewportSize({ width: 375, height: 746 });
+    await page.goto("/");
+
+    const tour = page.getByRole("dialog", { name: "ChronoAtlas quick tour" });
+    await expect(tour).toBeVisible();
+
+    for (const [width, height] of [
+      [375, 746],
+      [320, 568],
+      [740, 360],
+    ]) {
+      await page.setViewportSize({ width, height });
+      const geometry = await page.evaluate(() => {
+        const rect = (el: Element) => el.getBoundingClientRect();
+        const card = document.querySelector('[role="dialog"][aria-label="ChronoAtlas quick tour"]');
+        const nav = document.querySelector('nav[aria-label="Panes"]');
+        if (!card || !nav) throw new Error("Tour or pane nav missing");
+        const buttons = [...card.querySelectorAll("button")].filter((el) =>
+          ["Close tour", "Skip tour", "Next"].some(
+            (label) =>
+              el.textContent?.includes(label) || el.getAttribute("aria-label")?.includes(label),
+          ),
+        );
+        return {
+          cardBottom: rect(card).bottom,
+          navTop: rect(nav).top,
+          buttonHeights: buttons.map((el) => rect(el).height),
+        };
+      });
+      expect(geometry.cardBottom).toBeLessThanOrEqual(geometry.navTop);
+      expect(geometry.buttonHeights).toHaveLength(3);
+      expect(Math.min(...geometry.buttonHeights)).toBeGreaterThanOrEqual(44);
+      await expectNoHorizontalOverflow(page);
+    }
+
+    await tour.getByRole("button", { name: /Next/ }).click();
+    await expect(tour.getByText("Quick tour · 2 of")).toBeVisible();
+    await tour.getByRole("button", { name: "Skip tour" }).click();
+    await expect(tour).toHaveCount(0);
 
     expect(consoleErrors).toEqual([]);
     expect(pageErrors).toEqual([]);

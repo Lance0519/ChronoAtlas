@@ -169,7 +169,7 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
             back();
           }
         }}
-        className="fixed bottom-4 left-4 z-[70] w-[min(92vw,420px)] border border-ochre bg-sheet p-4 shadow-[0_12px_32px_rgba(29,28,25,0.18)]"
+        className="fixed bottom-[calc(3.75rem+env(safe-area-inset-bottom))] left-1/2 z-[70] max-h-[calc(100dvh-6rem)] w-[min(92vw,420px)] -translate-x-1/2 overflow-y-auto border border-ochre bg-sheet p-4 shadow-[0_12px_32px_rgba(29,28,25,0.18)] md:bottom-4 md:left-4 md:max-h-[calc(100dvh-2rem)] md:translate-x-0"
       >
         <div className="mb-2 flex items-center justify-between gap-3">
           <span className="caption-label">
@@ -179,7 +179,7 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
             type="button"
             aria-label="Close tour"
             onClick={finish}
-            className="grid size-8 place-items-center border border-rule text-muted hover:border-ink hover:text-ink"
+            className="grid size-11 place-items-center border border-rule text-muted hover:border-ink hover:text-ink md:size-8"
           >
             <X aria-hidden="true" size={14} strokeWidth={1.5} />
           </button>
@@ -194,7 +194,7 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
           <button
             type="button"
             onClick={finish}
-            className="text-xs text-muted underline underline-offset-4 hover:text-ink"
+            className="inline-flex min-h-11 items-center text-xs text-muted underline underline-offset-4 hover:text-ink md:min-h-0"
           >
             Skip tour
           </button>
@@ -203,7 +203,7 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
               <button
                 type="button"
                 onClick={back}
-                className="inline-flex min-h-9 items-center gap-1 border border-rule px-2 text-xs text-ink hover:border-ink"
+                className="inline-flex min-h-11 items-center gap-1 border border-rule px-2 text-xs text-ink hover:border-ink md:min-h-9"
               >
                 <ArrowLeft aria-hidden="true" size={13} strokeWidth={1.5} />
                 Back
@@ -212,7 +212,7 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
             <button
               type="button"
               onClick={next}
-              className="inline-flex min-h-9 items-center gap-1 border border-ink bg-ink px-3 text-xs text-sheet hover:bg-[#2e2a24]"
+              className="inline-flex min-h-11 items-center gap-1 border border-ink bg-ink px-3 text-xs text-sheet hover:bg-[#2e2a24] md:min-h-9"
             >
               {step === steps.length - 1 ? (
                 <>
