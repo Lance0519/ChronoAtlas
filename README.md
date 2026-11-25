@@ -28,6 +28,7 @@ npm run build
 - Clustered origin pins, blue current-location pins, origin/current switching for relocated artifacts, and dashed relationship arcs.
 - Drawer shows sourced summary, media with provenance, relationships, source links, and private local progress.
 - Responsive layout: three panes at `xl`, two panes with overlay drawer at `md`, and one pane with bottom navigation on phones.
+- First visit opens a short guided tour explaining the record feed, filters, map, drawer, and importer. Replay it from the **Guide** button in the header.
 - Unknown dates, coordinates, media years, creators, and licences stay labelled as unknown.
 
 ## Data and provenance

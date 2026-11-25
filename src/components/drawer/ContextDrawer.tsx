@@ -162,7 +162,11 @@ export function ContextDrawer({
   };
 
   return (
-    <section aria-label="Context drawer" className="flex h-full w-full min-h-0 flex-col bg-sheet">
+    <section
+      aria-label="Context drawer"
+      data-tour="drawer"
+      className="flex h-full w-full min-h-0 flex-col bg-sheet"
+    >
       <header className="border-b border-rule px-5 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

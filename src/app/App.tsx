@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { BookPlus, UserCheck, UserRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BookPlus, HelpCircle, UserCheck, UserRound } from "lucide-react";
 import { useAtlas } from "./hooks/useAtlas";
 import { AtlasProvider } from "./providers/AtlasProvider";
 import { ContextDrawer } from "../components/drawer/ContextDrawer";
 import { DiscoveryFeed } from "../components/feed/DiscoveryFeed";
 import { WikiImportDialog } from "../components/importer/WikiImportDialog";
 import { AuthCuratorDialog } from "../components/layout/AuthCuratorDialog";
+import { OnboardingTour } from "../components/layout/OnboardingTour";
 import { ThreePaneLayout } from "../components/layout/ThreePaneLayout";
 import { AtlasMap } from "../components/map/AtlasMap";
 import { useActiveEntry } from "../hooks/useActiveEntry";
@@ -18,6 +19,15 @@ function Workspace() {
   const [bounds, setBounds] = useState<ViewportBounds | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("chronoatlas.tour.v1")) setTourOpen(true);
+    } catch {
+      // Storage can be blocked; the guide still opens on replay.
+    }
+  }, []);
 
   const {
     entries,
@@ -47,6 +57,16 @@ function Workspace() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              data-tour="guide"
+              onClick={() => setTourOpen(true)}
+              className="inline-flex min-h-11 items-center gap-1.5 border border-rule bg-paper px-3 py-1.5 text-xs text-ink hover:border-ink md:min-h-9"
+            >
+              <HelpCircle aria-hidden="true" size={14} strokeWidth={1.5} />
+              <span>Guide</span>
+            </button>
+            <button
+              type="button"
+              data-tour="import"
               onClick={() => setImportOpen(true)}
               className="inline-flex min-h-11 items-center gap-1.5 border border-rule bg-sheet px-3 py-1.5 text-xs text-ink hover:border-ink hover:bg-paper md:min-h-9"
             >
@@ -55,6 +75,7 @@ function Workspace() {
             </button>
             <button
               type="button"
+              data-tour="archive"
               onClick={() => setAuthOpen(true)}
               className="inline-flex min-h-11 max-w-[220px] items-center gap-1.5 border border-rule bg-sheet px-3 py-1.5 text-xs text-muted hover:border-ink hover:text-ink md:min-h-9"
             >
@@ -122,6 +143,8 @@ function Workspace() {
         onClose={() => setAuthOpen(false)}
         corpusRevision={corpusRevision}
       />
+
+      <OnboardingTour open={tourOpen} onClose={() => setTourOpen(false)} />
     </>
   );
 }

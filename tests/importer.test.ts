@@ -285,11 +285,14 @@ describe("fetchWikipediaArticle and sanitizePlainText", () => {
 
   it("handles 404 not found, 429 retry recovery, and exhausted rate limits", async () => {
     const notFoundFetch = vi.fn<typeof fetch>(async () => jsonResponse({}, 404));
-    const missingResult = await fetchWikipediaArticle("https://en.wikipedia.org/wiki/No_Such_Page", {
-      fetchImpl: notFoundFetch,
-      baseDelayMs: 0,
-      maxRetries: 0,
-    });
+    const missingResult = await fetchWikipediaArticle(
+      "https://en.wikipedia.org/wiki/No_Such_Page",
+      {
+        fetchImpl: notFoundFetch,
+        baseDelayMs: 0,
+        maxRetries: 0,
+      },
+    );
     expect(missingResult.ok).toBe(false);
     if (!missingResult.ok) {
       expect(missingResult.code).toBe("not_found");
@@ -374,7 +377,10 @@ describe("fetchWikimediaImageMetadata and period classification", () => {
                     thumburl: "https://upload.wikimedia.org/thumb/Sample.jpg",
                     descriptionurl: "https://commons.wikimedia.org/wiki/File:Sample.jpg",
                     extmetadata: {
-                      Artist: { value: '<a href="https://commons.wikimedia.org/wiki/User:Test">Juan Dela Cruz</a>' },
+                      Artist: {
+                        value:
+                          '<a href="https://commons.wikimedia.org/wiki/User:Test">Juan Dela Cruz</a>',
+                      },
                       LicenseShortName: { value: "CC BY-SA 4.0" },
                       LicenseUrl: { value: "https://creativecommons.org/licenses/by-sa/4.0" },
                       Attribution: { value: "Juan Dela Cruz (CC BY-SA 4.0)" },
@@ -465,9 +471,9 @@ describe("fetchWikimediaImageMetadata and period classification", () => {
 describe("duplicate detection, payload validation, and draft builder", () => {
   it("detects exact_slug, normalized_title, source_url, and location_similarity", () => {
     expect(normalizeComparisonTitle("Noli Me Tángere!")).toBe("noli me tangere");
-    expect(normalizeComparableUrl("https://en.m.wikipedia.org/w/index.php?title=Intramuros#Wall")).toBe(
-      "https://en.wikipedia.org/wiki/intramuros",
-    );
+    expect(
+      normalizeComparableUrl("https://en.m.wikipedia.org/w/index.php?title=Intramuros#Wall"),
+    ).toBe("https://en.wikipedia.org/wiki/intramuros");
 
     const existing: HistoricalEntry[] = [
       seedEntries[0],
@@ -514,7 +520,12 @@ describe("duplicate detection, payload validation, and draft builder", () => {
 
     expect(exactAndUrl[0].entry.id).toBe(seedEntries[0].id);
     expect(exactAndUrl[0].reasons).toEqual(
-      expect.arrayContaining(["exact_slug", "normalized_title", "source_url", "location_similarity"]),
+      expect.arrayContaining([
+        "exact_slug",
+        "normalized_title",
+        "source_url",
+        "location_similarity",
+      ]),
     );
 
     const nearbyOnly = findDuplicateCandidates(
@@ -536,9 +547,11 @@ describe("duplicate detection, payload validation, and draft builder", () => {
       existing,
       existingSources,
     );
-    expect(nearbyOnly.some((c) => c.entry.id === "e-nearby" && c.reasons.includes("location_similarity"))).toBe(
-      true,
-    );
+    expect(
+      nearbyOnly.some(
+        (c) => c.entry.id === "e-nearby" && c.reasons.includes("location_similarity"),
+      ),
+    ).toBe(true);
   });
 
   it("validates import payloads and catches bad slugs, year order, place current location, and unsafe URLs", () => {

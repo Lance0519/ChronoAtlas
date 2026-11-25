@@ -135,7 +135,11 @@ export function DiscoveryFeed({
   };
 
   return (
-    <section aria-label="Discovery feed" className="flex h-full w-full min-h-0 flex-col bg-sheet">
+    <section
+      aria-label="Discovery feed"
+      data-tour="feed"
+      className="flex h-full w-full min-h-0 flex-col bg-sheet"
+    >
       <div className="border-b border-rule px-4 py-3">
         <div className="mb-3 flex items-baseline justify-between gap-2">
           <h2 className="text-[22px] leading-tight text-ink">Records</h2>
@@ -168,6 +172,7 @@ export function DiscoveryFeed({
           />
           <input
             id="feed-search"
+            data-tour="search"
             type="search"
             name="q"
             value={draftQuery}
@@ -337,7 +342,7 @@ export function DiscoveryFeed({
         </PanelMessage>
       )}
 
-      <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <ul data-tour="records" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {!loading &&
           entries.map((entry) => (
             <EntryCard

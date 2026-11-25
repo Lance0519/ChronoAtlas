@@ -135,13 +135,22 @@ describe("viewport bounds", () => {
       maxLon: -165,
     });
     expect(
-      entryInAnyBounds(makeEntry({ origin: { latitude: -13.83, longitude: -171.75 } }), antimeridianEnvelopes),
+      entryInAnyBounds(
+        makeEntry({ origin: { latitude: -13.83, longitude: -171.75 } }),
+        antimeridianEnvelopes,
+      ),
     ).toBe(true);
     expect(
-      entryInAnyBounds(makeEntry({ origin: { latitude: -18.14, longitude: 178.44 } }), antimeridianEnvelopes),
+      entryInAnyBounds(
+        makeEntry({ origin: { latitude: -18.14, longitude: 178.44 } }),
+        antimeridianEnvelopes,
+      ),
     ).toBe(true);
     expect(
-      entryInAnyBounds(makeEntry({ origin: { latitude: -15, longitude: 0 } }), antimeridianEnvelopes),
+      entryInAnyBounds(
+        makeEntry({ origin: { latitude: -15, longitude: 0 } }),
+        antimeridianEnvelopes,
+      ),
     ).toBe(false);
     expect(entryInAnyBounds(makeEntry({ origin: null, current: null }), manilaEnvelopes)).toBe(
       false,
@@ -165,9 +174,7 @@ describe("media comparison eligibility", () => {
 
   it("requires an archival and a modern image in the same reviewed group", () => {
     expect(getComparisonPair([item("a", "archival", "g"), item("b", "unknown", "g")])).toBeNull();
-    expect(
-      getComparisonPair([item("a", "archival", null), item("b", "modern", null)]),
-    ).toBeNull();
+    expect(getComparisonPair([item("a", "archival", null), item("b", "modern", null)])).toBeNull();
     expect(
       getComparisonPair([item("a", "archival", "g"), item("b", "modern", "g")])?.modern.id,
     ).toBe("b");

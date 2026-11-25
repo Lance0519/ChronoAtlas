@@ -35,7 +35,10 @@ export function ThreePaneLayout({
       >
         Skip to content
       </a>
-      <header className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-2">
+      <header
+        data-tour="header"
+        className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-2"
+      >
         <div className="flex items-baseline gap-3">
           <h1 className="font-display text-[22px] leading-none tracking-tight">ChronoAtlas</h1>
           <span className="hidden text-[11px] uppercase tracking-[0.14em] text-muted lg:inline">
@@ -72,6 +75,7 @@ export function ThreePaneLayout({
 
         <nav
           aria-label="Panes"
+          data-tour="panes"
           className="absolute inset-x-0 bottom-0 z-30 flex border-t border-rule bg-sheet pb-[env(safe-area-inset-bottom)] md:hidden"
         >
           <TabButton

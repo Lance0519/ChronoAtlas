@@ -129,6 +129,12 @@
   }
 }
 
+.tour-highlight {
+  outline: 2px solid var(--color-ochre);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgb(154 91 36 / 12%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

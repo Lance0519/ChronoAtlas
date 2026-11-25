@@ -509,6 +509,7 @@ export function AtlasMap({
   return (
     <section
       aria-label="Map canvas"
+      data-tour="map"
       className="relative h-full min-h-0 overflow-hidden bg-[#e9e4d8]"
     >
       <div ref={containerRef} className="absolute inset-0" />

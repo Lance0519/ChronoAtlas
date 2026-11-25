@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added a first-visit guided tour explaining the feed, filters, map, context drawer, and importer; replayable from the **Guide** button in the header.
+
 ## 0.3.0 — 2026-11-25
 
 - Ensured all 2,640 records have a non-empty summary and at least one media/evidence item.

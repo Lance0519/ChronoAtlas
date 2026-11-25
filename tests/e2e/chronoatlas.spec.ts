@@ -167,9 +167,11 @@ test.describe("ChronoAtlas critical user journeys", () => {
 
     await expect(page.getByRole("heading", { name: "ChronoAtlas" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Records" })).toBeVisible();
-    await expect(page.locator('section[aria-label="Map canvas"] canvas.maplibregl-canvas')).toBeVisible();
+    await expect(
+      page.locator('section[aria-label="Map canvas"] canvas.maplibregl-canvas'),
+    ).toBeVisible();
     await expect(page.getByText("Loading basemap…")).toHaveCount(0);
-    await expect(page.locator('button[data-entry-id]').first()).toBeVisible();
+    await expect(page.locator("button[data-entry-id]").first()).toBeVisible();
     await expect(page.locator('section[aria-label="Context drawer"]')).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
 
@@ -216,7 +218,9 @@ test.describe("ChronoAtlas critical user journeys", () => {
 
     // 3. Relationship navigation
     await drawer.getByRole("button", { name: /National Museum of Fine Arts/ }).click();
-    await expect(drawer.getByRole("heading", { name: "National Museum of Fine Arts" })).toBeVisible();
+    await expect(
+      drawer.getByRole("heading", { name: "National Museum of Fine Arts" }),
+    ).toBeVisible();
     await expect(drawer.getByText("Context · origin", { exact: true })).toBeVisible();
 
     // 4. Private progress persistence (visited + 600ms debounced notes) across reload
@@ -228,7 +232,7 @@ test.describe("ChronoAtlas critical user journeys", () => {
     await expect(drawer.getByText("Saved locally")).toBeVisible();
 
     await page.reload();
-    await expect(page.locator('button[data-entry-id]').first()).toBeVisible();
+    await expect(page.locator("button[data-entry-id]").first()).toBeVisible();
 
     await page.getByLabel("Search this map area").uncheck();
     await page.locator("#feed-search").fill("National Museum of Fine Arts");
@@ -236,7 +240,9 @@ test.describe("ChronoAtlas critical user journeys", () => {
     await expect(museumCardAfterReload).toBeVisible();
     await museumCardAfterReload.click();
 
-    await expect(drawer.getByRole("heading", { name: "National Museum of Fine Arts" })).toBeVisible();
+    await expect(
+      drawer.getByRole("heading", { name: "National Museum of Fine Arts" }),
+    ).toBeVisible();
     await expect(drawer.getByLabel("Marked as visited")).toBeChecked();
     await expect(drawer.locator("#personal-notes")).toHaveValue(
       "Observed neoclassical facade and main gallery.",
@@ -294,12 +300,14 @@ test.describe("ChronoAtlas critical user journeys", () => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: "Records" })).toBeVisible();
-    await expect(page.locator('section[aria-label="Map canvas"] canvas.maplibregl-canvas')).toBeVisible();
+    await expect(
+      page.locator('section[aria-label="Map canvas"] canvas.maplibregl-canvas'),
+    ).toBeVisible();
     await expect(page.locator('nav[aria-label="Panes"]')).toBeHidden();
-    await expect(page.locator('button[data-entry-id]').first()).toBeVisible();
+    await expect(page.locator("button[data-entry-id]").first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
-    await page.locator('button[data-entry-id]').first().click();
+    await page.locator("button[data-entry-id]").first().click();
     const drawer = page.locator('section[aria-label="Context drawer"]');
     await expect(drawer).toBeVisible();
     await expectNoHorizontalOverflow(page);
@@ -317,7 +325,7 @@ test.describe("ChronoAtlas critical user journeys", () => {
     await page.getByLabel("Search this map area").uncheck();
     await expectNoHorizontalOverflow(page);
 
-    await page.locator('button[data-entry-id]').first().click();
+    await page.locator("button[data-entry-id]").first().click();
     await expect(drawer).toBeVisible();
     await expect(mobileTabs.getByRole("button", { name: "Context" })).toHaveAttribute(
       "aria-current",

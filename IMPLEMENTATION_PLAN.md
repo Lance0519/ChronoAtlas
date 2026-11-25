@@ -35,15 +35,15 @@ Audit of the current app and dataset identified the following gaps against `CHRO
 
 ## Multi-agent phases and file ownership
 
-| Phase | Owner | Scope & Owned Files | Status |
-|---|---|---|---|
-| 0 | Coordinator | Audit, `IMPLEMENTATION_PLAN.md`, shared contracts in `src/types/atlas.ts`, Playwright install | IN PROGRESS |
-| 1A | `data-enrichment-specialist` | Repair 803 Q-IDs & 876 generic summaries in `unescoSeed.ts`/`unescoMedia.ts` via live APIs; expand `src/data/seed.ts` (~45–60 entries, relocated artifacts, links, archival/modern pairs); sync `supabase/seed.sql`; `scripts/*` | NOT STARTED |
-| 1B | `backend-services-architect` | `supabase/migrations/0002_search_and_import.sql`, `src/types/database.ts`, `src/lib/{supabase,validators}.ts`, `src/services/import/*`, `src/services/{entriesService,entryLinksService,mediaService,sourcesService,authService,localOverlay}.ts` | NOT STARTED |
-| 1C | `docs-ci-specialist` | Fix `design-system/chronoatlas/MASTER.md`; create `docs/{CHRONOATLAS_BLUEPRINT_V2,ARCHITECTURE,DATA_MODEL,SECURITY,TESTING,DEPLOYMENT}.md`, `.github/workflows/ci.yml` | NOT STARTED |
-| 2 | `frontend-ui-specialist` | Upgrade `src/app/*`, `src/hooks/*`, `src/components/{layout,feed,map,drawer,importer,ui}/*`, `vite.config.ts`, `src/styles/index.css` | NOT STARTED |
-| 3 | `qa-e2e-specialist` | `playwright.config.ts`, `tests/{atlas,feed,importer,drawer,mapFeatures}.test.*`, `tests/e2e/chronoatlas.spec.ts` | NOT STARTED |
-| 4 | Coordinator | Diff review, integration, full check suite (`format:check`, `lint`, `typecheck`, `test`, `build`, Playwright E2E), update `README.md`, `CHANGELOG.md`, and final status | NOT STARTED |
+| Phase | Owner                        | Scope & Owned Files                                                                                                                                                                                                                               | Status      |
+| ----- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 0     | Coordinator                  | Audit, `IMPLEMENTATION_PLAN.md`, shared contracts in `src/types/atlas.ts`, Playwright install                                                                                                                                                     | IN PROGRESS |
+| 1A    | `data-enrichment-specialist` | Repair 803 Q-IDs & 876 generic summaries in `unescoSeed.ts`/`unescoMedia.ts` via live APIs; expand `src/data/seed.ts` (~45–60 entries, relocated artifacts, links, archival/modern pairs); sync `supabase/seed.sql`; `scripts/*`                  | NOT STARTED |
+| 1B    | `backend-services-architect` | `supabase/migrations/0002_search_and_import.sql`, `src/types/database.ts`, `src/lib/{supabase,validators}.ts`, `src/services/import/*`, `src/services/{entriesService,entryLinksService,mediaService,sourcesService,authService,localOverlay}.ts` | NOT STARTED |
+| 1C    | `docs-ci-specialist`         | Fix `design-system/chronoatlas/MASTER.md`; create `docs/{CHRONOATLAS_BLUEPRINT_V2,ARCHITECTURE,DATA_MODEL,SECURITY,TESTING,DEPLOYMENT}.md`, `.github/workflows/ci.yml`                                                                            | NOT STARTED |
+| 2     | `frontend-ui-specialist`     | Upgrade `src/app/*`, `src/hooks/*`, `src/components/{layout,feed,map,drawer,importer,ui}/*`, `vite.config.ts`, `src/styles/index.css`                                                                                                             | NOT STARTED |
+| 3     | `qa-e2e-specialist`          | `playwright.config.ts`, `tests/{atlas,feed,importer,drawer,mapFeatures}.test.*`, `tests/e2e/chronoatlas.spec.ts`                                                                                                                                  | NOT STARTED |
+| 4     | Coordinator                  | Diff review, integration, full check suite (`format:check`, `lint`, `typecheck`, `test`, `build`, Playwright E2E), update `README.md`, `CHANGELOG.md`, and final status                                                                           | NOT STARTED |
 
 ## Risks and mitigations
 

@@ -123,10 +123,7 @@ export interface PersonalProgress {
 }
 
 export type DuplicateReason =
-  | "exact_slug"
-  | "normalized_title"
-  | "source_url"
-  | "location_similarity";
+  "exact_slug" | "normalized_title" | "source_url" | "location_similarity";
 
 export interface DuplicateCandidate {
   entry: HistoricalEntry;

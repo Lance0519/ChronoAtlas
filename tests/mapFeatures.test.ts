@@ -178,7 +178,10 @@ describe("buildArtifactTransferCollection", () => {
       current: { latitude: 15.0, longitude: 121.0 },
     });
 
-    const collection = buildArtifactTransferCollection([spoliarium, nonRelocated, place], spoliarium);
+    const collection = buildArtifactTransferCollection(
+      [spoliarium, nonRelocated, place],
+      spoliarium,
+    );
     expect(collection.features).toHaveLength(1);
     expect(collection.features[0].properties).toEqual({
       entryId: "e-spoliarium",
