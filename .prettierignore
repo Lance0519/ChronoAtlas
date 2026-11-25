@@ -1,0 +1,6 @@
+CHRONOATLAS_BLUEPRINT_V2.md
+design-system/
+node_modules/
+dist/
+src/data/unescoSeed.ts
+src/data/unescoMedia.ts

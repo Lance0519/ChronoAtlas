@@ -1,0 +1,140 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+/* MapLibre CSS is unlayered and outranks Tailwind's layered absolute utility. */
+.maplibregl-map {
+  position: absolute;
+  inset: 0;
+}
+
+@theme {
+  --color-paper: #f4f1e8;
+  --color-sheet: #fbf9f3;
+  --color-ink: #1d1c19;
+  --color-muted: #55524a;
+  --color-rule: #d8d2c3;
+  --color-ochre: #9a5b24;
+  --color-harbor: #35566b;
+  --font-display: "Crimson Pro", Georgia, serif;
+  --font-sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: #e5d3b8;
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ochre);
+    outline-offset: 2px;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+    touch-action: manipulation;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    font-weight: 600;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-paper);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #c9c1ae;
+    border: 3px solid var(--color-paper);
+  }
+
+  .maplibregl-ctrl-group {
+    border-radius: 0;
+    box-shadow: none;
+    border: 1px solid var(--color-rule);
+  }
+  .maplibregl-ctrl-group button + button {
+    border-top: 1px solid var(--color-rule);
+  }
+  .maplibregl-popup-content {
+    border-radius: 0;
+    background: var(--color-sheet);
+    color: var(--color-ink);
+    border: 1px solid var(--color-rule);
+    box-shadow: none;
+    padding: 8px 10px;
+    font-family: var(--font-sans);
+  }
+  .maplibregl-popup-tip {
+    border-top-color: var(--color-sheet);
+    border-bottom-color: var(--color-sheet);
+  }
+  .maplibregl-popup-close-button {
+    color: var(--color-muted);
+  }
+}
+
+@media (pointer: fine) {
+  html {
+    overscroll-behavior: none;
+  }
+}
+
+@layer utilities {
+  .rule-tight {
+    border-color: var(--color-rule);
+  }
+  .hairline {
+    border: 1px solid var(--color-rule);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .caption-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
