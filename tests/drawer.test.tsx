@@ -178,6 +178,12 @@ describe("ContextDrawer", () => {
 
     await user.click(screen.getByRole("button", { name: /Centre/i }));
     expect(slider.getAttribute("aria-valuetext")).toBe("50% archival, 50% modern");
+
+    await user.click(screen.getByRole("button", { name: "Gallery" }));
+    await user.click(screen.getByRole("button", { name: "Inspect full-size image" }));
+    expect(screen.getByRole("dialog", { name: "Full-size media viewer" })).toBeTruthy();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Full-size media viewer" })).toBeNull();
   });
 
   it("toggles Draft unreviewed -> Mark as reviewed and persists in local overlay", async () => {

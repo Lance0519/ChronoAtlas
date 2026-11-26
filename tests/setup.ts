@@ -20,4 +20,7 @@ Object.defineProperty(globalThis, "localStorage", {
 afterEach(() => {
   cleanup();
   store.clear();
+  if (typeof window !== "undefined" && window.history?.replaceState) {
+    window.history.replaceState(null, "", "/");
+  }
 });

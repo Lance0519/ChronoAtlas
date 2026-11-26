@@ -1,53 +1,32 @@
 # Implementation plan
 
-## Current state (audited 2026-11-25)
+## Current state (verified 2026-11-26)
 
-The repository contains ChronoAtlas v0.3.0, a working local three-pane vertical slice (`src/app`, `src/components/{layout,feed,map,drawer,ui}`, `src/services/entriesService.ts`, `src/data/{seed,unescoSeed,unescoMedia}.ts`, `supabase/migrations/0001_initial.sql`, `supabase/seed.sql`, and 15 Vitest checks).
+ChronoAtlas v0.5.0 implements the full local-first + Supabase-ready architecture, enriched historical datasets, Wikipedia/Wikimedia Importer, Paper Archive UX refinements, documentation suite, GitHub Actions CI workflow, and automated Vitest + Playwright E2E suites specified in `CHRONOATLAS_BLUEPRINT_V2.md`.
 
-Audit of the current app and dataset identified the following gaps against `CHRONOATLAS_BLUEPRINT_V2.md` and project goals:
+## Phase status summary
 
-1. **Dataset quality and breadth:**
-   - `src/data/unescoSeed.ts` has 2,620 Wikidata World Heritage Site records, of which **803** still have raw `Q...` identifiers as titles, **876** only have generic country/Wikidata fallback summaries, **0** have `locationName`, `era`, or `significance`, and **107** media items fall back to `/evidence-placeholder.svg`.
-   - `src/data/seed.ts` has only 10 curated entries, 1 artifact (`Spoliarium`), 4 relationship links, and 0 verified `archival` + `modern` comparison pairs (`comparisonGroup`).
-   - `supabase/seed.sql` inserts only 3 rows and omits media/artifacts.
-2. **Backend & dual-mode readiness:**
-   - No `.env` or live Supabase credentials exist; `src/lib/supabase.ts` does not exist yet.
-   - Missing global full-text search RPC and transactional curator import/review RPC (`supabase/migrations/0002_search_and_import.sql`).
-   - `src/services/entriesService.ts` hard-caps results at 500 without `hasMore`/pagination metadata, lacks dedicated `entryLinksService`, `mediaService`, `sourcesService`, `authService`, and bundles ~2.5 MB of static dataset TS into the initial chunk.
-3. **Wikipedia & Wikimedia Importer (§12):**
-   - `src/services/import/*` (`wikiUrlParser`, `wikiValidator`, `wikipediaService`, `wikimediaService`, `duplicateDetection`, `importPayloadBuilder`) and `src/components/importer/{WikiImportDialog,ImportReviewForm}.tsx` are not yet implemented.
-4. **Map, Feed & Context Drawer parity (§3, §8–11, §14–15):**
-   - Relocated artifacts do not render a direct origin-to-current relocation line unless an explicit `entry_links` row duplicates it.
-   - Relationship arcs share one dashed style instead of distinguishing `historical_influence`, `cultural_exchange`, `political_association`, and `artifact_relocation`.
-   - Map lacks `getClusterExpansionZoom`, hover/selection preview popup, World/Philippines view reset, and map-to-feed card auto-scroll sync.
-   - Notes autosave writes on every keystroke instead of 600ms debounced autosave with `Saving…`/`Saved`/`Failed`/retry and dirty-state guard.
-   - Local-mode curator imports and review toggles do not yet persist in a browser overlay with JSON export.
-5. **Docs, Design System Alignment, CI & E2E (§0.3, §18–20):**
-   - `design-system/chronoatlas/MASTER.md` contains a conflicting generic "Email Client" blue/red spec instead of the "Paper archive" system in `DESIGN.md`.
-   - Missing `docs/{CHRONOATLAS_BLUEPRINT_V2,ARCHITECTURE,DATA_MODEL,SECURITY,TESTING,DEPLOYMENT}.md`, `.github/workflows/ci.yml`, and Playwright E2E suite.
+| Phase | Scope                                                                                                                                                                                                                                                                                               | Key Files                                                                                                                         | Status                                                                                |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 0     | Audit, architecture alignment, shared TypeScript contracts                                                                                                                                                                                                                                          | `IMPLEMENTATION_PLAN.md`, `src/types/atlas.ts`, `vite.config.ts`                                                                  | `VERIFIED`                                                                            |
+| 1A    | Multi-source UNESCO backfill (2,620 sites) & curated corpus expansion (55 entries, 17 artifacts, 40 links, 17 comparison pairs, synced SQL seed)                                                                                                                                                    | `scripts/{fetch-unesco,enrich-unesco,build-curated-corpus}.mjs`, `src/data/{seed,unescoSeed,unescoMedia}.ts`, `supabase/seed.sql` | `VERIFIED`                                                                            |
+| 1B    | Incremental SQL RPCs, dual-mode Supabase/local seam, lazy corpus chunking, local curator overlay, and 6-module Wikipedia/Wikimedia importer                                                                                                                                                         | `supabase/migrations/0002_search_and_import.sql`, `src/types/database.ts`, `src/lib/{supabase,validators}.ts`, `src/services/**`  | `IMPLEMENTED` · local mode `VERIFIED` · live Supabase `BLOCKED` on `.env` credentials |
+| 1C    | Design system alignment, Blueprint v2 documentation deliverables, and GitHub Actions CI                                                                                                                                                                                                             | `design-system/chronoatlas/MASTER.md`, `docs/*.md`, `.github/workflows/ci.yml`                                                    | `VERIFIED`                                                                            |
+| 2     | Three-pane UI, dual-pin transfer lines, typed relationship arcs, `WikiImportDialog`, `ImportReviewForm`, `AuthCuratorDialog`, `OnboardingTour`                                                                                                                                                      | `src/app/**`, `src/hooks/**`, `src/components/**`, `src/styles/index.css`                                                         | `VERIFIED`                                                                            |
+| 3     | Seamless UX audit & polish: URL deep-linking & Back/Forward sync, relevance/chronological sort, `Then & Now` / `Visited` lenses, worldwide match escape hatches, pointer-drag compare + fullscreen lightbox, map area/reopen pills + `View full journey`, keyboard shortcuts (`/`, `[`, `]`, `Esc`) | `src/app/**`, `src/hooks/**`, `src/components/**`, `src/services/entriesService.ts`                                               | `VERIFIED`                                                                            |
+| 4     | Unit, component, and headless Chromium Playwright E2E suites                                                                                                                                                                                                                                        | `playwright.config.ts`, `tests/**`                                                                                                | `VERIFIED`                                                                            |
 
-## Agreed architecture & decisions
+## Verification log (2026-11-26)
 
-- **Dual-mode data access:** Local-first offline-capable runtime by default (lazy-loading the 2,620+ corpus asynchronously so initial paint stays fast, paired with a persistent `localStorage` curator overlay and JSON export), while automatically activating the real Supabase + PostGIS adapter when `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (or `VITE_SUPABASE_ANON_KEY`) are configured.
-- **Provenance & review policy:** Strict draft-until-human-reviewed (`reviewed: false` by default for all imported and automated Wikidata/Wikipedia records, with explicit Draft vs Reviewed indicators and a curator review checklist/toggle). No fabricated dates, coordinates, creators, or licenses.
-- **Visual design:** Deepen the `DESIGN.md` "Paper archive" aesthetic (`#f4f1e8` Paper, `#fbf9f3` Sheet, `#1d1c19` Ink, `#9a5b24` Ochre, `#35566b` Harbor blue, Crimson Pro + Atkinson Hyperlegible, 1px rules) and align `design-system/chronoatlas/MASTER.md`.
-- **Dependencies:** Add `@playwright/test` for headless browser E2E verification; retain lightweight custom spherical great-circle utilities (`greatCircleSegments`) documented under §2.3 rather than adding `@turf/turf` bundle weight.
+| Command                 | Result                                                                                                                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run format:check`  | **Pass** — All matched files use Prettier code style                                                                                                                                        |
+| `npm run typecheck`     | **Pass** — `tsc -b --noEmit` (0 errors)                                                                                                                                                     |
+| `npm run lint`          | **Pass** — `eslint .` (0 errors, 0 warnings)                                                                                                                                                |
+| `npm run test -- --run` | **Pass** — 6 test files, **61 passed** (`atlas`, `feed`, `drawer`, `importer`, `mapFeatures`, `onboarding`)                                                                                 |
+| `npm run build`         | **Pass** — Code-split production bundle (`index` 331.24 kB / 79.50 kB gzip; async `unescoSeed`, `unescoMedia`, `vendor-maplibre`, `vendor-supabase`, `vendor-react`)                        |
+| `npx playwright test`   | **Pass** — **3 passed** in headless Chromium across desktop (`1440×900`), tablet (`800×746`), mobile (`375×746`, `320×568`, `740×360`) with 0 console/page errors and 0 horizontal overflow |
 
-## Multi-agent phases and file ownership
+## Remaining external blocker
 
-| Phase | Owner                        | Scope & Owned Files                                                                                                                                                                                                                               | Status      |
-| ----- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 0     | Coordinator                  | Audit, `IMPLEMENTATION_PLAN.md`, shared contracts in `src/types/atlas.ts`, Playwright install                                                                                                                                                     | IN PROGRESS |
-| 1A    | `data-enrichment-specialist` | Repair 803 Q-IDs & 876 generic summaries in `unescoSeed.ts`/`unescoMedia.ts` via live APIs; expand `src/data/seed.ts` (~45–60 entries, relocated artifacts, links, archival/modern pairs); sync `supabase/seed.sql`; `scripts/*`                  | NOT STARTED |
-| 1B    | `backend-services-architect` | `supabase/migrations/0002_search_and_import.sql`, `src/types/database.ts`, `src/lib/{supabase,validators}.ts`, `src/services/import/*`, `src/services/{entriesService,entryLinksService,mediaService,sourcesService,authService,localOverlay}.ts` | NOT STARTED |
-| 1C    | `docs-ci-specialist`         | Fix `design-system/chronoatlas/MASTER.md`; create `docs/{CHRONOATLAS_BLUEPRINT_V2,ARCHITECTURE,DATA_MODEL,SECURITY,TESTING,DEPLOYMENT}.md`, `.github/workflows/ci.yml`                                                                            | NOT STARTED |
-| 2     | `frontend-ui-specialist`     | Upgrade `src/app/*`, `src/hooks/*`, `src/components/{layout,feed,map,drawer,importer,ui}/*`, `vite.config.ts`, `src/styles/index.css`                                                                                                             | NOT STARTED |
-| 3     | `qa-e2e-specialist`          | `playwright.config.ts`, `tests/{atlas,feed,importer,drawer,mapFeatures}.test.*`, `tests/e2e/chronoatlas.spec.ts`                                                                                                                                  | NOT STARTED |
-| 4     | Coordinator                  | Diff review, integration, full check suite (`format:check`, `lint`, `typecheck`, `test`, `build`, Playwright E2E), update `README.md`, `CHANGELOG.md`, and final status                                                                           | NOT STARTED |
-
-## Risks and mitigations
-
-- **Wikidata/Wikipedia rate limits during enrichment:** Mitigated with paced queues, exponential backoff, and preserving existing sourced fields if any individual lookup fails.
-- **Wikimedia image availability:** Only store URLs verified from live Wikidata/Wikimedia Commons API responses; records without images retain `/evidence-placeholder.svg` honestly.
-- **Unlayered CSS / MapLibre resize / bundle chunking:** Maintain `.maplibregl-map` specificity fix, `ResizeObserver`, and split the 2,620-entry corpus into an async Vite chunk.
-- **Live Supabase verification:** Without active Supabase credentials in `.env`, SQL syntax and client logic will be verified locally while live remote RLS execution remains documented as `BLOCKED` on credentials.
+- **Live Supabase database & RLS execution (`BLOCKED` on credentials):** `supabase/migrations/0001_initial.sql`, `0002_search_and_import.sql`, and `supabase/seed.sql` are complete and wired to `src/lib/supabase.ts` and `src/services/*`, but no `.env` credentials (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_ANON_KEY`) are configured in this workspace. Once a Supabase project is provisioned, apply the migrations and run live RLS/query-plan checks as documented in `docs/DEPLOYMENT.md` and `docs/TESTING.md`.

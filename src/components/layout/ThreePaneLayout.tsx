@@ -3,18 +3,20 @@ import type { ReactNode } from "react";
 import { BookMarked, List, Map as MapIcon } from "lucide-react";
 import { useAtlas } from "../../app/hooks/useAtlas";
 
-type MobilePane = "feed" | "map" | "drawer";
+export type MobilePane = "feed" | "map" | "drawer";
 
 export function ThreePaneLayout({
   feed,
   map,
   drawer,
   headerActions,
+  tourMobilePane = null,
 }: {
   feed: ReactNode;
   map: ReactNode;
   drawer: ReactNode;
   headerActions?: ReactNode;
+  tourMobilePane?: MobilePane | null;
 }) {
   const { state, dispatch } = useAtlas();
   const [mobilePane, setMobilePane] = useState<MobilePane>("map");
@@ -26,6 +28,12 @@ export function ThreePaneLayout({
       setMobilePane((current) => (current === "drawer" ? "map" : current));
     }
   }, [activeEntryId, isContextDrawerOpen]);
+
+  useEffect(() => {
+    if (tourMobilePane) {
+      setMobilePane(tourMobilePane);
+    }
+  }, [tourMobilePane]);
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-paper">
@@ -39,8 +47,16 @@ export function ThreePaneLayout({
         data-tour="header"
         className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-1.5"
       >
-        <div className="flex items-baseline gap-3">
-          <h1 className="font-display text-[22px] leading-none tracking-tight">ChronoAtlas</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="flex items-center gap-2 font-display text-[22px] leading-none tracking-tight">
+            <img
+              src="/chronoatlas_logo_with_full.png"
+              alt=""
+              className="h-6 w-auto shrink-0 sm:h-7"
+              decoding="async"
+            />
+            <span className="sr-only">ChronoAtlas</span>
+          </h1>
           <span className="hidden text-[11px] uppercase tracking-[0.14em] text-muted lg:inline">
             A geographical record of the past
           </span>
@@ -104,6 +120,7 @@ export function ThreePaneLayout({
           />
           <TabButton
             active={mobilePane === "drawer"}
+            hasIndicator={Boolean(activeEntryId) && mobilePane !== "drawer"}
             onClick={() => {
               dispatch({ type: "openDrawer" });
               setMobilePane("drawer");
@@ -119,11 +136,13 @@ export function ThreePaneLayout({
 
 function TabButton({
   active,
+  hasIndicator = false,
   onClick,
   icon,
   label,
 }: {
   active: boolean;
+  hasIndicator?: boolean;
   onClick: () => void;
   icon: ReactNode;
   label: string;
@@ -133,10 +152,13 @@ function TabButton({
       type="button"
       aria-current={active ? "page" : undefined}
       onClick={onClick}
-      className={`flex min-h-12 flex-1 items-center justify-center gap-2 border-b-2 text-xs ${active ? "border-ochre text-ink" : "border-transparent text-muted"}`}
+      className={`flex min-h-12 flex-1 items-center justify-center gap-2 border-b-2 text-xs transition-colors duration-150 ${
+        active ? "border-ochre text-ink" : "border-transparent text-muted"
+      }`}
     >
       {icon}
-      {label}
+      <span>{label}</span>
+      {hasIndicator && <span aria-hidden="true" className="size-1.5 bg-ochre" />}
     </button>
   );
 }

@@ -27,6 +27,11 @@ export function useAuthSession() {
   const [loading, setLoading] = useState<boolean>(configured);
 
   const refresh = useCallback(async () => {
+    if (!isSupabaseConfigured()) {
+      setSession(INITIAL_LOCAL_SESSION);
+      setLoading(false);
+      return;
+    }
     try {
       const next = await getSession();
       setSession(next);
@@ -36,6 +41,10 @@ export function useAuthSession() {
   }, []);
 
   useEffect(() => {
+    if (!configured) {
+      return;
+    }
+
     let mounted = true;
     void getSession()
       .then((next) => {
@@ -58,7 +67,7 @@ export function useAuthSession() {
       mounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [configured]);
 
   const canCurate =
     session.mode === "local" || (session.authenticated && isCuratorRole(session.role));

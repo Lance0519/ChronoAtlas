@@ -11,6 +11,8 @@ export interface Coordinates {
   longitude: number;
 }
 
+export type AtlasSortOrder = "relevance" | "oldest" | "newest";
+
 export interface AtlasFilters {
   query: string;
   scope: ScopeFilter;
@@ -18,6 +20,9 @@ export interface AtlasFilters {
   minYear: number | null;
   maxYear: number | null;
   searchThisArea: boolean;
+  sort?: AtlasSortOrder;
+  onlyCompared?: boolean;
+  onlyVisited?: boolean;
 }
 
 export interface HistoricalEntry {
@@ -107,6 +112,7 @@ export interface EntriesPage {
   hasMore: boolean;
   nextOffset: number | null;
   totalMatched: number;
+  worldwideMatched?: number;
 }
 
 export interface AtlasState {

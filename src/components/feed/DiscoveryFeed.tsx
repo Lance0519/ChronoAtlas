@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowDownUp,
   BookPlus,
   CheckCircle2,
+  Columns2,
+  Globe,
   MapPin,
   MapPinOff,
   Package,
@@ -14,7 +17,12 @@ import { defaultFilters } from "../../app/store/atlasStore";
 import { FEED_RESULT_CAP } from "../../hooks/useAtlasEntries";
 import { getCachedProgress, subscribeProgressChanges } from "../../hooks/usePersonalProgress";
 import { formatYearRange } from "../../lib/format";
-import type { EntryTypeFilter, HistoricalEntry, ScopeFilter } from "../../types/atlas";
+import type {
+  AtlasSortOrder,
+  EntryTypeFilter,
+  HistoricalEntry,
+  ScopeFilter,
+} from "../../types/atlas";
 import { ErrorMessage, PanelMessage, SkeletonRows } from "../ui/States";
 
 interface DiscoveryFeedProps {
@@ -24,6 +32,7 @@ interface DiscoveryFeedProps {
   onRetry: () => void;
   onClearArea: () => void;
   totalMatched?: number;
+  worldwideMatched?: number;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
@@ -58,6 +67,7 @@ export function DiscoveryFeed({
   onRetry,
   onClearArea,
   totalMatched,
+  worldwideMatched,
   hasMore = false,
   loadingMore = false,
   onLoadMore,
@@ -67,6 +77,7 @@ export function DiscoveryFeed({
   const { state, dispatch } = useAtlas();
   const { filters, activeEntryId } = state;
   const [draftQuery, setDraftQuery] = useState(filters.query);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [, setProgressTick] = useState(0);
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const lastScrolledId = useRef<string | null>(null);
@@ -89,7 +100,7 @@ export function DiscoveryFeed({
         lastDispatchedQuery.current = draftQuery;
         dispatch({ type: "setFilter", patch: { query: draftQuery } });
       }
-    }, 250);
+    }, 220);
     return () => window.clearTimeout(timer);
   }, [draftQuery, filters.query, dispatch]);
 
@@ -110,18 +121,24 @@ export function DiscoveryFeed({
     }
   }, [activeEntryId, entries]);
 
+  const currentSort: AtlasSortOrder = filters.sort ?? "relevance";
+
   const hasNonDefaultFilters =
     filters.query !== defaultFilters.query ||
     filters.scope !== defaultFilters.scope ||
     filters.entryType !== defaultFilters.entryType ||
     filters.minYear !== defaultFilters.minYear ||
     filters.maxYear !== defaultFilters.maxYear ||
-    filters.searchThisArea !== defaultFilters.searchThisArea;
+    filters.searchThisArea !== defaultFilters.searchThisArea ||
+    currentSort !== "relevance" ||
+    Boolean(filters.onlyCompared) ||
+    Boolean(filters.onlyVisited);
 
   const isCapped = entries.length >= resultCap && hasMore;
 
   const countLabel = (() => {
-    if (loading) return "Loading…";
+    if (loading && entries.length === 0) return "Loading…";
+    if (loading && entries.length > 0) return "Updating…";
     if (totalMatched !== undefined && totalMatched > entries.length) {
       return `${entries.length} of ${totalMatched}${isCapped ? "+" : ""} shown`;
     }
@@ -133,6 +150,14 @@ export function DiscoveryFeed({
     const parsed = Number(raw);
     return Number.isFinite(parsed) && Number.isInteger(parsed) ? parsed : null;
   };
+
+  const extraWorldwideCount =
+    filters.searchThisArea &&
+    worldwideMatched !== undefined &&
+    totalMatched !== undefined &&
+    worldwideMatched > totalMatched
+      ? worldwideMatched - totalMatched
+      : 0;
 
   return (
     <section
@@ -151,7 +176,7 @@ export function DiscoveryFeed({
               <button
                 type="button"
                 onClick={onOpenImporter}
-                className="inline-flex items-center gap-1 border border-rule bg-paper px-2 py-1 text-[11px] text-ink hover:border-ink"
+                className="inline-flex items-center gap-1 border border-rule bg-paper px-2 py-1 text-[11px] text-ink transition-colors duration-150 hover:border-ink"
               >
                 <BookPlus aria-hidden="true" size={12} strokeWidth={1.5} />
                 Import
@@ -168,7 +193,7 @@ export function DiscoveryFeed({
             aria-hidden="true"
             size={16}
             strokeWidth={1.5}
-            className="pointer-events-none absolute left-2 top-3 text-muted"
+            className="pointer-events-none absolute left-2.5 top-2.5 text-muted"
           />
           <input
             id="feed-search"
@@ -176,11 +201,21 @@ export function DiscoveryFeed({
             type="search"
             name="q"
             value={draftQuery}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             onChange={(event) => setDraftQuery(event.target.value)}
             placeholder="Search titles, eras, places…"
             autoComplete="off"
-            className="w-full border border-rule bg-paper py-2 pl-8 pr-8 text-sm placeholder:text-muted/80 focus:border-ochre"
+            className="w-full border border-rule bg-paper py-2 pl-8 pr-8 text-sm transition-colors duration-150 placeholder:text-muted/80 focus:border-ochre"
           />
+          {!draftQuery && !searchFocused && (
+            <kbd
+              aria-hidden="true"
+              className="pointer-events-none absolute right-2 top-2 hidden border border-rule bg-sheet px-1.5 py-0.5 font-sans text-[10px] text-muted sm:inline-block"
+            >
+              /
+            </kbd>
+          )}
           {draftQuery && (
             <button
               type="button"
@@ -218,7 +253,7 @@ export function DiscoveryFeed({
           }
         />
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
           <span className="caption-label w-10 shrink-0">Era</span>
           <div role="group" aria-label="Era presets" className="flex flex-wrap gap-x-3 gap-y-1">
             {ERA_PRESETS.map((preset) => {
@@ -246,8 +281,8 @@ export function DiscoveryFeed({
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-xs text-muted" htmlFor="year-from">
+        <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
+          <label className="flex items-center gap-1.5 text-xs text-muted" htmlFor="year-from">
             From
             <input
               id="year-from"
@@ -262,10 +297,10 @@ export function DiscoveryFeed({
                 })
               }
               placeholder="Any"
-              className="w-20 border border-rule bg-paper px-2 py-1 tabular text-ink focus:border-ochre"
+              className="w-18 border border-rule bg-paper px-2 py-1 tabular text-ink focus:border-ochre"
             />
           </label>
-          <label className="flex items-center gap-2 text-xs text-muted" htmlFor="year-to">
+          <label className="flex items-center gap-1.5 text-xs text-muted" htmlFor="year-to">
             To
             <input
               id="year-to"
@@ -280,14 +315,72 @@ export function DiscoveryFeed({
                 })
               }
               placeholder="Any"
-              className="w-20 border border-rule bg-paper px-2 py-1 tabular text-ink focus:border-ochre"
+              className="w-18 border border-rule bg-paper px-2 py-1 tabular text-ink focus:border-ochre"
             />
           </label>
+
+          <label
+            className="ml-auto flex items-center gap-1.5 text-xs text-muted"
+            htmlFor="feed-sort"
+          >
+            <ArrowDownUp aria-hidden="true" size={12} strokeWidth={1.5} />
+            <span className="sr-only">Sort order</span>
+            <select
+              id="feed-sort"
+              value={currentSort}
+              onChange={(event) =>
+                dispatch({
+                  type: "setFilter",
+                  patch: { sort: event.target.value as AtlasSortOrder },
+                })
+              }
+              className="border border-rule bg-paper px-1.5 py-1 text-xs text-ink focus:border-ochre"
+            >
+              <option value="relevance">{filters.query.trim() ? "Relevance" : "Title A–Z"}</option>
+              <option value="oldest">Oldest first</option>
+              <option value="newest">Newest first</option>
+            </select>
+          </label>
         </div>
+
         <p className="mt-1 text-[11px] text-muted">
           Astronomical years (e.g. <span className="tabular">-499</span> = 500 BCE,{" "}
           <span className="tabular">0</span> = 1 BCE).
         </p>
+
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            aria-pressed={Boolean(filters.onlyCompared)}
+            onClick={() =>
+              dispatch({ type: "setFilter", patch: { onlyCompared: !filters.onlyCompared } })
+            }
+            className={`inline-flex items-center gap-1 border px-2 py-0.5 text-[11px] transition-colors duration-150 ${
+              filters.onlyCompared
+                ? "border-ochre bg-paper text-ochre"
+                : "border-rule bg-sheet text-muted hover:border-ink hover:text-ink"
+            }`}
+          >
+            <Columns2 aria-hidden="true" size={11} strokeWidth={1.5} />
+            Then &amp; Now
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={Boolean(filters.onlyVisited)}
+            onClick={() =>
+              dispatch({ type: "setFilter", patch: { onlyVisited: !filters.onlyVisited } })
+            }
+            className={`inline-flex items-center gap-1 border px-2 py-0.5 text-[11px] transition-colors duration-150 ${
+              filters.onlyVisited
+                ? "border-ochre bg-paper text-ochre"
+                : "border-rule bg-sheet text-muted hover:border-ink hover:text-ink"
+            }`}
+          >
+            <CheckCircle2 aria-hidden="true" size={11} strokeWidth={1.5} />
+            Visited
+          </button>
+        </div>
 
         <div className="mt-2.5 flex items-center justify-between gap-2">
           <label className="flex cursor-pointer items-center gap-2 text-xs text-ink">
@@ -311,7 +404,7 @@ export function DiscoveryFeed({
                 lastDispatchedQuery.current = "";
                 dispatch({ type: "resetFilters" });
               }}
-              className="inline-flex items-center gap-1 border border-rule px-2 py-1 text-[11px] text-muted hover:border-ink hover:text-ink"
+              className="inline-flex items-center gap-1 border border-rule px-2 py-1 text-[11px] text-muted transition-colors duration-150 hover:border-ink hover:text-ink"
             >
               <RotateCcw aria-hidden="true" size={11} strokeWidth={1.5} />
               Reset filters
@@ -321,7 +414,27 @@ export function DiscoveryFeed({
       </div>
 
       {error && <ErrorMessage onRetry={onRetry}>{error}</ErrorMessage>}
-      {loading && <SkeletonRows />}
+      {loading && entries.length === 0 && <SkeletonRows />}
+
+      {!loading &&
+        !error &&
+        entries.length > 0 &&
+        extraWorldwideCount > 0 &&
+        filters.query.trim() && (
+          <div className="flex items-center justify-between gap-2 border-b border-rule bg-paper px-4 py-2 text-xs text-muted">
+            <span>
+              <span className="tabular text-ink">{worldwideMatched}</span> matches worldwide
+            </span>
+            <button
+              type="button"
+              onClick={onClearArea}
+              className="inline-flex items-center gap-1 text-ochre underline underline-offset-2 hover:text-ink"
+            >
+              <Globe aria-hidden="true" size={12} strokeWidth={1.5} />
+              Search the world
+            </button>
+          </div>
+        )}
 
       {!loading && !error && entries.length === 0 && (
         <PanelMessage
@@ -331,45 +444,55 @@ export function DiscoveryFeed({
               <button
                 type="button"
                 onClick={onClearArea}
-                className="border border-ink px-3 py-1.5 text-xs hover:bg-ink hover:text-sheet"
+                className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-xs text-sheet transition-colors duration-150 hover:bg-[#2e2a24]"
               >
-                Search the world
+                <Globe aria-hidden="true" size={13} strokeWidth={1.5} />
+                {worldwideMatched && worldwideMatched > 0
+                  ? `Search the world (${worldwideMatched} found)`
+                  : "Search the world"}
               </button>
             ) : undefined
           }
         >
-          Try a different search, widen the year range, or turn off the map-area filter.
+          {filters.searchThisArea && worldwideMatched && worldwideMatched > 0
+            ? `${worldwideMatched} matching historical record${worldwideMatched === 1 ? " lies" : "s lie"} outside the current map viewport.`
+            : "Try a different search, widen the year range, or turn off the map-area filter."}
         </PanelMessage>
       )}
 
-      <ul data-tour="records" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        {!loading &&
-          entries.map((entry) => (
-            <EntryCard
-              key={entry.id}
-              entry={entry}
-              selected={entry.id === activeEntryId}
-              visited={getCachedProgress(entry.id).visited}
-              buttonRef={(el) => {
-                if (el) {
-                  cardRefs.current.set(entry.id, el);
-                } else {
-                  cardRefs.current.delete(entry.id);
-                }
-              }}
-              onSelect={() => {
-                lastScrolledId.current = entry.id;
-                dispatch({ type: "selectEntry", id: entry.id, role: "origin" });
-              }}
-            />
-          ))}
+      <ul
+        data-tour="records"
+        aria-busy={loading ? "true" : undefined}
+        className={`min-h-0 flex-1 overflow-y-auto overscroll-contain transition-opacity duration-150 ${
+          loading && entries.length > 0 ? "opacity-75" : "opacity-100"
+        }`}
+      >
+        {entries.map((entry) => (
+          <EntryCard
+            key={entry.id}
+            entry={entry}
+            selected={entry.id === activeEntryId}
+            visited={getCachedProgress(entry.id).visited}
+            buttonRef={(el) => {
+              if (el) {
+                cardRefs.current.set(entry.id, el);
+              } else {
+                cardRefs.current.delete(entry.id);
+              }
+            }}
+            onSelect={() => {
+              lastScrolledId.current = entry.id;
+              dispatch({ type: "selectEntry", id: entry.id, role: "origin" });
+            }}
+          />
+        ))}
         {!loading && entries.length > 0 && hasMore && !isCapped && onLoadMore && (
           <li className="border-b border-rule px-4 py-3">
             <button
               type="button"
               onClick={onLoadMore}
               disabled={loadingMore}
-              className="w-full border border-rule bg-paper px-3 py-2 text-xs text-ink hover:border-ink disabled:opacity-60"
+              className="w-full border border-rule bg-paper px-3 py-2 text-xs text-ink transition-colors duration-150 hover:border-ink disabled:opacity-60"
             >
               {loadingMore ? "Loading more records…" : "Load more records"}
             </button>
@@ -377,7 +500,7 @@ export function DiscoveryFeed({
         )}
       </ul>
 
-      {!loading && entries.length > 0 && (
+      {entries.length > 0 && (
         <p className="border-t border-rule px-4 py-2 text-[11px] text-muted">
           {isCapped
             ? `Display capped at ${resultCap} results. Narrow your search or map area to locate specific entries.`
@@ -402,7 +525,7 @@ function FilterRow({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="mt-3 flex items-center gap-3">
+    <div className="mt-2.5 flex items-center gap-3">
       <span className="caption-label w-10 shrink-0">{label}</span>
       <div role="group" aria-label={label} className="flex gap-3">
         {options.map(([id, text]) => (
@@ -438,6 +561,7 @@ function EntryCard({
 }) {
   const Icon = entry.entryType === "artifact" ? Package : MapPin;
   const unlocated = entry.origin === null;
+  const isRelocated = entry.entryType === "artifact" && entry.current !== null;
 
   return (
     <li>
@@ -456,6 +580,11 @@ function EntryCard({
           <span>
             {entry.scope} · {entry.entryType}
           </span>
+          {isRelocated && (
+            <span className="border border-harbor/40 px-1 py-0.2 text-[10px] normal-case tracking-normal text-harbor">
+              Relocated
+            </span>
+          )}
           {unlocated && (
             <span className="inline-flex items-center gap-1 border border-rule px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-muted">
               <MapPinOff aria-hidden="true" size={10} strokeWidth={1.5} />

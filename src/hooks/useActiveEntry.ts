@@ -61,13 +61,23 @@ export function useActiveEntry(activeEntryId: string | null, corpusRevision = 0)
     setSources(getSourcesForEntry(activeEntryId));
     setLinks(getLinksForEntry(activeEntryId));
     setError(null);
-    setLoading(!syncEntry || isSupabaseConfigured());
+
+    const supabaseMode = isSupabaseConfigured();
+    const extendedReady = isExtendedCorpusLoaded();
+
+    // Fast path: in local mode when extended corpus is already loaded, data is resolved synchronously.
+    if (!supabaseMode && extendedReady) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(!syncEntry || supabaseMode);
 
     let cancelled = false;
 
     const load = async () => {
       try {
-        if (!isSupabaseConfigured() && !isExtendedCorpusLoaded()) {
+        if (!supabaseMode && !extendedReady) {
           await ensureExtendedCorpusLoaded();
         }
         if (cancelled || requestId !== generation.current) return;

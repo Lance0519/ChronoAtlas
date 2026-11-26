@@ -214,4 +214,49 @@ describe("DiscoveryFeed", () => {
     await user.click(screen.getByRole("button", { name: "Import" }));
     expect(onOpenImporter).toHaveBeenCalledTimes(1);
   });
+
+  it("surfaces worldwide match count in empty map-area state and toggles Then & Now / sort lenses", async () => {
+    const user = userEvent.setup();
+    const onClearArea = vi.fn();
+
+    const { rerender } = render(
+      <AtlasProvider>
+        <DiscoveryFeed
+          entries={[]}
+          loading={false}
+          error={null}
+          onRetry={() => {}}
+          onClearArea={onClearArea}
+          totalMatched={0}
+          worldwideMatched={3}
+        />
+        <FilterProbe />
+      </AtlasProvider>,
+    );
+
+    const worldBtn = screen.getByRole("button", { name: /Search the world \(3 found\)/i });
+    await user.click(worldBtn);
+    expect(onClearArea).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <AtlasProvider>
+        <DiscoveryFeed
+          entries={[seedEntries[0]]}
+          loading={false}
+          error={null}
+          onRetry={() => {}}
+          onClearArea={onClearArea}
+        />
+        <FilterProbe />
+      </AtlasProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Then & Now/i }));
+    await user.selectOptions(screen.getByLabelText("Sort order"), "oldest");
+
+    expect(JSON.parse(screen.getByTestId("filters").textContent ?? "{}")).toMatchObject({
+      onlyCompared: true,
+      sort: "oldest",
+    });
+  });
 });

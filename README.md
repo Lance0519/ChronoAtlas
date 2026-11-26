@@ -1,77 +1,63 @@
 # ChronoAtlas
 
-A map-first historical atlas vertical slice. It runs entirely on a bounded local seed dataset, with a typed service seam and SQL migration ready for Supabase/PostGIS later.
+ChronoAtlas is a map-first historical exploration web application for Philippine heritage and international historical landmarks and artifacts. It connects a searchable discovery feed, an interactive MapLibre vector map, and a sourced historical context drawer around one canonical selection state.
 
-## Run it
+## Run locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the URL printed by Vite. No `.env` file or credentials are needed.
+Open the URL printed by Vite. No `.env` file or API keys are required for local mode.
 
-Quality commands:
+## Quality & verification commands
 
 ```bash
-npm run typecheck
-npm run lint
-npm run test -- --run
 npm run format:check
+npm run lint
+npm run typecheck
+npm run test -- --run
 npm run build
+npx playwright test
 ```
 
-## What works
+## Features
 
-- Three-pane workspace: discovery feed, MapLibre canvas, and context drawer share one selected record.
-- Search, scope/type filters, year range, and "Search this map area" sync to the URL.
-- Clustered origin pins, blue current-location pins, origin/current switching for relocated artifacts, and dashed relationship arcs.
-- Drawer shows sourced summary, media with provenance, relationships, source links, and private local progress.
-- Responsive layout: three panes at `xl`, two panes with overlay drawer at `md`, and one pane with bottom navigation on phones.
-- First visit opens a short guided tour explaining the record feed, filters, map, drawer, and importer. Replay it from the **Guide** button in the header.
-- Unknown dates, coordinates, media years, creators, and licences stay labelled as unknown.
+- **Coordinated three-pane workspace:** Discovery feed, MapLibre GL JS canvas (`OpenFreeMap` Liberty style), and Context Drawer share a single canonical `activeEntryId` and `activeLocationRole` (`origin` | `current`), with full URL deep-linking (`?entry=...&role=current`) and browser Back/Forward synchronization.
+- **Smooth discovery & search:** Relevance-ranked search, chronological sorting (`Oldest first` / `Newest first`), Era presets, `Then & Now` and `Visited` quick lenses, smooth in-place list transitions without flicker on map pan, and automatic worldwide match hints (`Search the world (N found)`) whenever a searched record lies outside the active map area.
+- **Dual-pin relocated artifacts & typed relationship arcs:** Origin pins, ringed harbor-blue current-holding pins, antimeridian-safe great-circle transfer lines, typed historical relationship arcs (solid ochre for influence/succession, dashed ochre for exchange/association, dashed blue for relocation), `View full journey` bounds framing, hover popups, cluster expansion zoom, and a collapsible non-color-only legend.
+- **Archival media & Then-vs-Now comparison:** Full-resolution archival plate lightbox (`Inspect`), pointer-drag and keyboard-operable Then-vs-Now comparison slider across verified archival/modern image pairs, and explicit source/creator/license attribution.
+- **Wikipedia & Wikimedia Importer:** Allowlisted `*.wikipedia.org` URL parser, REST + Action API summary/coordinate retrieval, Commons `extmetadata` attribution lookup, duplicate detection (`exact_slug`, `normalized_title`, `source_url`, `location_similarity`), and editable curator review form.
+- **Dual-mode persistence:** Offline-capable local mode with a persistent browser curator overlay (`Export JSON` / `Reset`) and 600ms debounced private notes autosave, automatically switching to Supabase Auth + PostGIS RPCs when `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (or `VITE_SUPABASE_ANON_KEY`) are configured.
+- **Keyboard & responsive ergonomics:** `/` focuses search, `[` and `]` step across records, `Escape` collapses the drawer while leaving a map reopen pill, and responsive breakpoints adapt cleanly across desktop (`xl` 3-pane), tablet (`md` 2-pane + overlay), and phone (`375px` bottom tab bar + interactive guided tour).
 
-## Data and provenance
+## Datasets & provenance
 
-`src/data/seed.ts` holds 10 curated draft entries, 9 media items, 4 relationships, and source references. `src/data/unescoSeed.ts` adds 2,620 Wikidata World Heritage Site records with coordinates, descriptions, inception years, and source links. The generated file is ignored by Prettier; regenerate it with `node scripts/fetch-unesco.mjs` (network) or pass cached SPARQL JSON files as arguments. Every record is marked "Draft · source review pending"; nothing is presented as verified scholarship.
+Every historical entry remains marked `reviewed: false` (`Draft · unreviewed`) by default until human curation:
 
-Every entry now has a non-empty summary and at least one media/evidence item. Of the 2,620 fetched records, 1,208 summaries come from Wikipedia extracts, 540 from Wikidata descriptions, and 872 from sourced country fallbacks. Images come from Wikidata P18 via Wikimedia Commons with creator and licence where stated: 2,513 records have a Commons image, and 107 show an explicit source-record card instead of a fabricated image.
+- **Curated Philippine & international corpus (`src/data/seed.ts` & `supabase/seed.sql`):** 55 entries (34 Philippine heritage places and artifacts, 21 international landmarks and relocated artifacts; 17 total artifacts, 14 relocated with verified origin and current holding coordinates), 72 verified Wikimedia Commons media items, **17 reviewed archival-vs-modern comparison pairs**, **40 typed historical relationship links**, and **187 multi-source references** across UNESCO World Heritage Open Data, the National Museum of the Philippines, Musée du Louvre, Wikidata, Wikivoyage, Wikipedia, and official heritage/library archives.
+- **Global UNESCO / Wikidata corpus (`src/data/unescoSeed.ts` & `src/data/unescoMedia.ts`):** 2,620 World Heritage records lazy-loaded via dynamic Vite code-splitting, with **0** raw `Q-ID` titles, **0** generic/placeholder summaries, **2,620/2,620** resolved `locationName` values, **5,685** multi-source citations (UNESCO WHC, Wikidata, Wikipedia, official portals), and **2,535** verified Wikimedia Commons images (`85` honest `/evidence-placeholder.svg` source cards where no Commons photo exists).
 
-The service caps world results at 500 so the local slice stays responsive. The map's "Search this map area" filter narrows the corpus before that cap.
-
-Regenerate the fetched corpus and its evidence with:
+Regenerate or refresh the corpus from live APIs with:
 
 ```bash
 node scripts/fetch-unesco.mjs
 node scripts/enrich-unesco.mjs
+node scripts/build-curated-corpus.mjs
 ```
 
-`src/services/entriesService.ts` is the only data access seam. `listEntries`, `getEntry`, `getMedia`, `getSources`, `getLinks`, `getProgress`, and `patchProgress` are the functions a future Supabase adapter must implement. UI components do not call `fetch`, Supabase, or `localStorage` directly.
+## Documentation
 
-Private progress is stored only in the browser under `chronoatlas.progress.v1` and is labelled as local. It is not part of the public dataset.
+- [Technical Blueprint (`docs/CHRONOATLAS_BLUEPRINT_V2.md`)](docs/CHRONOATLAS_BLUEPRINT_V2.md)
+- [Architecture (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md)
+- [Data Model (`docs/DATA_MODEL.md`)](docs/DATA_MODEL.md)
+- [Security & RLS (`docs/SECURITY.md`)](docs/SECURITY.md)
+- [Testing (`docs/TESTING.md`)](docs/TESTING.md)
+- [Deployment (`docs/DEPLOYMENT.md`)](docs/DEPLOYMENT.md)
+- [Design Contract (`DESIGN.md`)](DESIGN.md)
 
-## Supabase readiness
+## Known limitations
 
-`supabase/migrations/0001_initial.sql` defines:
-
-- PostGIS geography columns with coordinate precision and source fields.
-- Check constraints for slugs, year ranges, precision, and artifact-only current locations.
-- GIN full-text search and GiST spatial indexes.
-- RLS on every table: public read for curated records, curator-only writes checked by `public.is_curator()`, and per-user progress isolation.
-- A bounded, wrapped-bounds `search_viewport` RPC with cursor-style offsets.
-
-`supabase/seed.sql` inserts a small draft dataset. No live database, credentials, or RLS integration tests were available in this pass. `.env.example` lists the reserved Vite variable names; the client does not read them yet.
-
-## Visual direction
-
-The paper archive contract lives in `DESIGN.md`. Generated references are in `design-system/chronoatlas/MASTER.md`. Tokens are warm paper, sheet, ink, rule, ochre, and archive blue in `src/styles/index.css`. No gradients, glass, glow, or decorative motion.
-
-## Known limits
-
-- Map tiles and fonts come from public CDNs; the map shows a retryable error when the basemap fails.
-- Supabase runtime integration, the Wikipedia importer UI, Playwright journeys, and query-plan measurement are out of scope for this vertical slice.
-- Vite reports a >500 kB chunk warning because MapLibre GL JS and the fetched corpus are bundled into the initial chunk. The build still succeeds.
-
-## Verification
-
-See `IMPLEMENTATION_PLAN.md` for the phase-by-phase log.
+- Map vector tiles and web fonts load from public CDNs (`OpenFreeMap`, `Google Fonts`); if offline, the map displays a recoverable retry banner while search, feed, and context drawer remain usable in local mode.
+- Live Supabase RLS and PostGIS `EXPLAIN ANALYZE` execution require a provisioned Supabase project configured via `.env` (`VITE_SUPABASE_URL` and publishable/anon key). Never place a Supabase `service_role` key in browser environment variables.

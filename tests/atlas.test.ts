@@ -5,6 +5,8 @@ import {
   filtersFromUrl,
   filtersToSearch,
   initialAtlasState,
+  stateFromUrl,
+  stateToSearch,
 } from "../src/app/store/atlasStore";
 import { seedEntries, seedLinks, seedMedia } from "../src/data/seed";
 import { unescoMedia } from "../src/data/unescoMedia";
@@ -255,6 +257,16 @@ describe("state rules", () => {
     const search = filtersToSearch(filters);
     expect(filtersFromUrl(search)).toEqual(filters);
     expect(filtersToSearch(defaultFilters)).toBe("");
+
+    const deepState = stateFromUrl(
+      "?scope=local&sort=oldest&compare=true&entry=e-spoliarium&role=current&drawer=closed",
+    );
+    expect(deepState.activeEntryId).toBe("e-spoliarium");
+    expect(deepState.activeLocationRole).toBe("current");
+    expect(deepState.isContextDrawerOpen).toBe(false);
+    expect(deepState.filters.sort).toBe("oldest");
+    expect(deepState.filters.onlyCompared).toBe(true);
+    expect(stateFromUrl(stateToSearch(deepState))).toEqual(deepState);
   });
 });
 
@@ -396,5 +408,38 @@ describe("dataset helpers and enriched corpus integrity", () => {
     patchProgress(id, { notes: "A note" });
     patchProgress(id, { visited: true });
     expect(getProgress(id)).toEqual({ visited: true, notes: "A note" });
+  });
+
+  it("supports chronological sorting, Then & Now / Visited lenses, and worldwide match counts", () => {
+    patchProgress("e-intramuros", { visited: true });
+
+    const visitedOnly = listEntriesPage(
+      { ...defaultFilters, searchThisArea: false, onlyVisited: true },
+      null,
+    );
+    expect(visitedOnly.entries.map((e) => e.id)).toContain("e-intramuros");
+    expect(visitedOnly.totalMatched).toBe(1);
+
+    const comparedOnly = listEntriesPage(
+      { ...defaultFilters, searchThisArea: false, onlyCompared: true },
+      null,
+    );
+    expect(comparedOnly.totalMatched).toBeGreaterThanOrEqual(10);
+
+    const oldestFirst = listEntriesPage(
+      { ...defaultFilters, scope: "local", searchThisArea: false, sort: "oldest" },
+      null,
+    );
+    const dated = oldestFirst.entries.filter((e) => e.startYear !== null);
+    expect(dated.length).toBeGreaterThan(2);
+    expect(dated[0].startYear!).toBeLessThanOrEqual(dated[1].startYear!);
+
+    // Narrow ocean viewport excludes Rosetta Stone locally while reporting worldwideMatched > 0
+    const narrowPage = listEntriesPage(
+      { ...defaultFilters, query: "Rosetta Stone", searchThisArea: true },
+      { minLat: 14, minLon: 120, maxLat: 15, maxLon: 122 },
+    );
+    expect(narrowPage.totalMatched).toBe(0);
+    expect(narrowPage.worldwideMatched).toBeGreaterThanOrEqual(1);
   });
 });

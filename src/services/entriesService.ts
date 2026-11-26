@@ -1,5 +1,6 @@
 import { seedEntries, seedLinks, seedMedia, seedSources } from "../data/seed";
 import { buildViewportEnvelopes, entryInAnyBounds, isValidCoordinate } from "../lib/geo";
+import { getComparisonPair } from "../lib/media";
 import { getSupabaseClient, isSupabaseConfigured } from "../lib/supabase";
 import type {
   AtlasFilters,
@@ -220,6 +221,17 @@ function getMergedMedia(): MediaItem[] {
   return [...seedMedia, ...extendedMedia, ...overlay.media];
 }
 
+function scoreQueryMatch(entry: HistoricalEntry, query: string, sourceTitles: string[]): number {
+  const titleLower = entry.title.toLowerCase();
+  if (titleLower === query) return 0;
+  if (titleLower.startsWith(query)) return 1;
+  if (titleLower.includes(query)) return 2;
+  const metaLower = `${entry.era ?? ""} ${entry.locationName ?? ""}`.toLowerCase();
+  if (metaLower.includes(query)) return 3;
+  if (sourceTitles.some((title) => title.includes(query))) return 4;
+  return 5;
+}
+
 function filterAndSortLocalEntries(
   filters: AtlasFilters,
   bounds: ViewportBounds | null,
@@ -229,6 +241,24 @@ function filterAndSortLocalEntries(
   const query = filters.query.trim().toLowerCase();
   const envelopes = bounds && filters.searchThisArea ? buildViewportEnvelopes(bounds) : [];
   const hasAreaFilter = filters.searchThisArea && bounds !== null;
+
+  let comparedIds: Set<string> | null = null;
+  if (filters.onlyCompared) {
+    const mediaByEntry = new Map<string, MediaItem[]>();
+    for (const item of getMergedMedia()) {
+      const list = mediaByEntry.get(item.entryId) ?? [];
+      list.push(item);
+      mediaByEntry.set(item.entryId, list);
+    }
+    comparedIds = new Set<string>();
+    for (const [entryId, items] of mediaByEntry) {
+      if (getComparisonPair(items) !== null) {
+        comparedIds.add(entryId);
+      }
+    }
+  }
+
+  const visitedProgress = filters.onlyVisited ? readProgress() : null;
 
   let sourceTitlesByEntry: Map<string, string[]> | null = null;
   if (query) {
@@ -240,10 +270,14 @@ function filterAndSortLocalEntries(
     }
   }
 
+  const sortMode = filters.sort ?? "relevance";
+
   return entries
     .filter((entry) => {
       if (filters.scope !== "all" && entry.scope !== filters.scope) return false;
       if (filters.entryType !== "all" && entry.entryType !== filters.entryType) return false;
+      if (comparedIds && !comparedIds.has(entry.id)) return false;
+      if (visitedProgress && !visitedProgress[entry.id]?.visited) return false;
       if (
         filters.minYear !== null &&
         (entry.endYear ?? entry.startYear ?? -Infinity) < filters.minYear
@@ -263,7 +297,22 @@ function filterAndSortLocalEntries(
       if (hasAreaFilter && !entryInAnyBounds(entry, envelopes)) return false;
       return true;
     })
-    .sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
+    .sort((a, b) => {
+      if (sortMode === "oldest") {
+        const yearA = a.startYear ?? Number.POSITIVE_INFINITY;
+        const yearB = b.startYear ?? Number.POSITIVE_INFINITY;
+        if (yearA !== yearB) return yearA - yearB;
+      } else if (sortMode === "newest") {
+        const yearA = a.endYear ?? a.startYear ?? Number.NEGATIVE_INFINITY;
+        const yearB = b.endYear ?? b.startYear ?? Number.NEGATIVE_INFINITY;
+        if (yearA !== yearB) return yearB - yearA;
+      } else if (query) {
+        const rankA = scoreQueryMatch(a, query, sourceTitlesByEntry?.get(a.id) ?? []);
+        const rankB = scoreQueryMatch(b, query, sourceTitlesByEntry?.get(b.id) ?? []);
+        if (rankA !== rankB) return rankA - rankB;
+      }
+      return a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
+    });
 }
 
 export function listEntriesPage(
@@ -276,12 +325,17 @@ export function listEntriesPage(
   const matched = filterAndSortLocalEntries(filters, bounds);
   const windowed = matched.slice(offset, offset + limit + 1);
   const hasMore = windowed.length > limit;
+  const hasAreaFilter = filters.searchThisArea && bounds !== null;
+  const worldwideMatched = hasAreaFilter
+    ? filterAndSortLocalEntries({ ...filters, searchThisArea: false }, null).length
+    : matched.length;
 
   return {
     entries: windowed.slice(0, limit),
     hasMore,
     nextOffset: hasMore ? offset + limit : null,
     totalMatched: matched.length,
+    worldwideMatched,
   };
 }
 

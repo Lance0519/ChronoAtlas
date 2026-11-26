@@ -84,22 +84,26 @@ export function usePersonalProgress(entryId: string, session: UserSession) {
     setLoading(session.mode === "supabase" && session.authenticated && isUuid(effectEntryId));
 
     let active = true;
-    void getProgressAsync(effectEntryId)
-      .then((loaded) => {
-        if (!active || requestId !== generationRef.current) return;
-        setProgress(loaded);
-        latestProgressRef.current = loaded;
-        lastSavedNotesRef.current = loaded.notes;
-        publishProgressSnapshot(effectEntryId, loaded);
-        setLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (!active || requestId !== generationRef.current) return;
-        setLoading(false);
-        setErrorMessage(
-          err instanceof Error && err.message ? err.message : "Could not load personal notes.",
-        );
-      });
+    if (session.mode === "local") {
+      progressSnapshotCache.set(effectEntryId, initial);
+    } else {
+      void getProgressAsync(effectEntryId)
+        .then((loaded) => {
+          if (!active || requestId !== generationRef.current) return;
+          setProgress(loaded);
+          latestProgressRef.current = loaded;
+          lastSavedNotesRef.current = loaded.notes;
+          publishProgressSnapshot(effectEntryId, loaded);
+          setLoading(false);
+        })
+        .catch((err: unknown) => {
+          if (!active || requestId !== generationRef.current) return;
+          setLoading(false);
+          setErrorMessage(
+            err instanceof Error && err.message ? err.message : "Could not load personal notes.",
+          );
+        });
+    }
 
     return () => {
       active = false;

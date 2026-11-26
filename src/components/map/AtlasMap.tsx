@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
-import { Compass, Globe, LocateFixed, Minus, Plus } from "lucide-react";
+import {
+  BookMarked,
+  ChevronDown,
+  ChevronUp,
+  Compass,
+  Globe,
+  LocateFixed,
+  Minus,
+  Plus,
+  X,
+} from "lucide-react";
 import { useAtlas } from "../../app/hooks/useAtlas";
 import { getEntry, getLinks } from "../../services/entriesService";
 import type { DirectedEntryLink, HistoricalEntry, ViewportBounds } from "../../types/atlas";
@@ -26,6 +36,7 @@ interface AtlasMapProps {
   onBoundsChange: (bounds: ViewportBounds) => void;
   activeEntry?: HistoricalEntry;
   activeLinks?: DirectedEntryLink[];
+  journeyRequestCount?: number;
 }
 
 function prefersReducedMotion(): boolean {
@@ -67,9 +78,10 @@ export function AtlasMap({
   onBoundsChange,
   activeEntry,
   activeLinks,
+  journeyRequestCount = 0,
 }: AtlasMapProps) {
   const { state, dispatch } = useAtlas();
-  const { activeEntryId, activeLocationRole } = state;
+  const { activeEntryId, activeLocationRole, filters, isContextDrawerOpen } = state;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onBoundsRef = useRef(onBoundsChange);
@@ -93,6 +105,9 @@ export function AtlasMap({
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [retry, setRetry] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
+  const [legendOpen, setLegendOpen] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 768 : true,
+  );
 
   onBoundsRef.current = onBoundsChange;
   dispatchRef.current = dispatch;
@@ -503,6 +518,30 @@ export function AtlasMap({
     });
   }, [resolvedActiveId, activeLocationRole, status]);
 
+  useEffect(() => {
+    if (journeyRequestCount <= 0) return;
+    const map = mapRef.current;
+    const currentActive = resolvedActiveRef.current;
+    if (!map || status !== "ready" || !currentActive?.origin || !currentActive?.current) return;
+
+    const minLon = Math.min(currentActive.origin.longitude, currentActive.current.longitude);
+    const maxLon = Math.max(currentActive.origin.longitude, currentActive.current.longitude);
+    const minLat = Math.min(currentActive.origin.latitude, currentActive.current.latitude);
+    const maxLat = Math.max(currentActive.origin.latitude, currentActive.current.latitude);
+
+    map.fitBounds(
+      [
+        [minLon, minLat],
+        [maxLon, maxLat],
+      ],
+      {
+        padding: 72,
+        maxZoom: 6,
+        duration: prefersReducedMotion() ? 0 : 800,
+      },
+    );
+  }, [journeyRequestCount, status]);
+
   const zoomDuration = prefersReducedMotion() ? 0 : 250;
   const flyDuration = prefersReducedMotion() ? 0 : 750;
 
@@ -526,7 +565,7 @@ export function AtlasMap({
       {status === "error" && (
         <div
           role="alert"
-          className="absolute inset-x-4 top-4 z-10 border border-[#b8835c] bg-[#f7e9e2] px-4 py-3 text-sm text-[#7a3720]"
+          className="absolute inset-x-4 top-14 z-10 border border-[#b8835c] bg-[#f7e9e2] px-4 py-3 text-sm text-[#7a3720]"
         >
           <p>The basemap could not load. Check the network connection and try again.</p>
           {notice && <p className="mt-1 text-xs opacity-80">{notice}</p>}
@@ -540,10 +579,66 @@ export function AtlasMap({
         </div>
       )}
 
+      <div className="absolute left-3 right-16 top-3 z-10 flex flex-wrap items-center gap-1.5 pointer-events-none">
+        <button
+          type="button"
+          aria-label="Toggle map area filter"
+          aria-pressed={filters.searchThisArea}
+          onClick={() =>
+            dispatch({ type: "setFilter", patch: { searchThisArea: !filters.searchThisArea } })
+          }
+          className={`pointer-events-auto inline-flex min-h-9 items-center gap-1.5 border px-2.5 py-1 text-[11px] transition-colors duration-150 ${
+            filters.searchThisArea
+              ? "border-ochre bg-sheet text-ink hover:bg-paper"
+              : "border-rule bg-sheet/95 text-muted hover:border-ink hover:text-ink"
+          }`}
+        >
+          {filters.searchThisArea ? (
+            <>
+              <span className="size-1.5 bg-ochre" aria-hidden="true" />
+              <span>Area filter: On</span>
+            </>
+          ) : (
+            <>
+              <Globe aria-hidden="true" size={12} strokeWidth={1.5} />
+              <span>Worldwide</span>
+            </>
+          )}
+        </button>
+
+        {resolvedActive && !isContextDrawerOpen && (
+          <div className="pointer-events-auto inline-flex max-w-full items-center border border-ochre bg-sheet">
+            <button
+              type="button"
+              aria-label="Reopen context drawer"
+              onClick={() => dispatch({ type: "openDrawer" })}
+              className="inline-flex min-h-9 max-w-[220px] items-center gap-1.5 px-2.5 py-1 text-[11px] text-ink hover:bg-paper sm:max-w-[300px]"
+            >
+              <BookMarked
+                aria-hidden="true"
+                size={12}
+                strokeWidth={1.5}
+                className="shrink-0 text-ochre"
+              />
+              <span className="truncate font-medium">{resolvedActive.title}</span>
+              <span className="shrink-0 text-ochre underline underline-offset-2">Open</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Clear selected record"
+              onClick={() => dispatch({ type: "clearSelection" })}
+              className="grid size-9 place-items-center border-l border-rule text-muted hover:bg-paper hover:text-ink"
+            >
+              <X aria-hidden="true" size={13} strokeWidth={1.5} />
+            </button>
+          </div>
+        )}
+      </div>
+
       {notice && status === "ready" && (
         <p
           role="status"
-          className="absolute inset-x-4 top-4 z-10 max-w-md border border-rule bg-sheet px-3 py-2 text-xs text-muted"
+          className="absolute left-3 right-16 top-14 z-10 max-w-md border border-rule bg-sheet px-3 py-2 text-xs text-muted"
         >
           {notice}
         </p>
@@ -558,7 +653,7 @@ export function AtlasMap({
           aria-label="Zoom in"
           title="Zoom in"
           onClick={() => mapRef.current?.zoomIn({ duration: zoomDuration })}
-          className="grid size-11 place-items-center hover:bg-paper md:size-9"
+          className="grid size-11 place-items-center transition-colors duration-150 hover:bg-paper md:size-9"
         >
           <Plus aria-hidden="true" size={16} strokeWidth={1.5} />
         </button>
@@ -567,7 +662,7 @@ export function AtlasMap({
           aria-label="Zoom out"
           title="Zoom out"
           onClick={() => mapRef.current?.zoomOut({ duration: zoomDuration })}
-          className="grid size-11 place-items-center border-t border-rule hover:bg-paper md:size-9"
+          className="grid size-11 place-items-center border-t border-rule transition-colors duration-150 hover:bg-paper md:size-9"
         >
           <Minus aria-hidden="true" size={16} strokeWidth={1.5} />
         </button>
@@ -583,7 +678,7 @@ export function AtlasMap({
               essential: false,
             })
           }
-          className="grid size-11 place-items-center border-t border-rule hover:bg-paper md:size-9"
+          className="grid size-11 place-items-center border-t border-rule transition-colors duration-150 hover:bg-paper md:size-9"
         >
           <LocateFixed aria-hidden="true" size={16} strokeWidth={1.5} />
         </button>
@@ -599,33 +694,50 @@ export function AtlasMap({
               essential: false,
             })
           }
-          className="grid size-11 place-items-center border-t border-rule hover:bg-paper md:size-9"
+          className="grid size-11 place-items-center border-t border-rule transition-colors duration-150 hover:bg-paper md:size-9"
         >
           <Globe aria-hidden="true" size={16} strokeWidth={1.5} />
         </button>
       </div>
 
-      <div className="pointer-events-none absolute bottom-3 left-3 z-10 max-w-[270px] border border-rule bg-sheet/95 px-3 py-2 text-[11px] text-muted">
-        <p className="caption-label mb-1">Legend</p>
-        <p>● Filled dot · place of origin</p>
-        <p>○ Hollow ring · artifact origin</p>
-        <p>
-          <span className="text-harbor">◎</span> Ringed blue dot · current holding location
-        </p>
-        <p>
-          <span className="text-ochre">━━</span> Solid ochre · historical influence
-        </p>
-        <p>
-          <span className="text-ochre">╌╌</span> Dashed ochre · exchange / association
-        </p>
-        <p>
-          <span className="text-harbor">╌╌</span> Dashed blue · artifact relocation
-        </p>
-        {bounds && (
-          <p className="mt-1.5 border-t border-rule pt-1 tabular">
-            Viewport {bounds.minLon.toFixed(1)}, {bounds.minLat.toFixed(1)} to{" "}
-            {bounds.maxLon.toFixed(1)}, {bounds.maxLat.toFixed(1)}
-          </p>
+      <div className="absolute bottom-3 left-3 z-10 max-w-[270px] border border-rule bg-sheet/95 text-[11px] text-muted">
+        <button
+          type="button"
+          aria-expanded={legendOpen}
+          aria-label={legendOpen ? "Collapse map legend" : "Expand map legend"}
+          onClick={() => setLegendOpen((value) => !value)}
+          className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left hover:bg-paper"
+        >
+          <span className="caption-label">Legend</span>
+          {legendOpen ? (
+            <ChevronDown aria-hidden="true" size={12} strokeWidth={1.5} />
+          ) : (
+            <ChevronUp aria-hidden="true" size={12} strokeWidth={1.5} />
+          )}
+        </button>
+        {legendOpen && (
+          <div className="pointer-events-none border-t border-rule px-3 py-2">
+            <p>● Filled dot · place of origin</p>
+            <p>○ Hollow ring · artifact origin</p>
+            <p>
+              <span className="text-harbor">◎</span> Ringed blue dot · current holding location
+            </p>
+            <p>
+              <span className="text-ochre">━━</span> Solid ochre · historical influence
+            </p>
+            <p>
+              <span className="text-ochre">╌╌</span> Dashed ochre · exchange / association
+            </p>
+            <p>
+              <span className="text-harbor">╌╌</span> Dashed blue · artifact relocation
+            </p>
+            {bounds && (
+              <p className="mt-1.5 border-t border-rule pt-1 tabular">
+                Viewport {bounds.minLon.toFixed(1)}, {bounds.minLat.toFixed(1)} to{" "}
+                {bounds.maxLon.toFixed(1)}, {bounds.maxLat.toFixed(1)}
+              </p>
+            )}
+          </div>
         )}
       </div>
 

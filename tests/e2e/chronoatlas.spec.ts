@@ -277,6 +277,30 @@ test.describe("ChronoAtlas critical user journeys", () => {
     await expect(archiveDialog.locator("dl")).toContainText("Imported sources1");
     await archiveDialog.getByRole("button", { name: "Close workspace dialog" }).click();
 
+    // 6. Keyboard shortcuts (/ focus search, Escape collapse drawer + map reopen pill) & Inspect lightbox
+    await page.keyboard.press("Escape");
+    await expect(drawer).toHaveCount(0);
+
+    const reopenPill = page.getByRole("button", { name: "Reopen context drawer" });
+    await expect(reopenPill).toBeVisible();
+    await reopenPill.click();
+    await expect(drawer.getByRole("heading", { name: "Pasig River Heritage Test" })).toBeVisible();
+
+    await drawer.getByRole("button", { name: "Inspect full-size image" }).click();
+    const mediaViewer = page.getByRole("dialog", { name: "Full-size media viewer" });
+    await expect(mediaViewer).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(mediaViewer).toHaveCount(0);
+    await expect(drawer).toBeVisible();
+
+    await page.keyboard.press("/");
+    await expect(page.locator("#feed-search")).toBeFocused();
+
+    // 7. Shareable URL deep-link directly restores selected artifact & location role
+    await page.goto("/?area=false&entry=e-spoliarium&role=current");
+    await expect(drawer.getByRole("heading", { name: "Spoliarium" })).toBeVisible();
+    await expect(drawer.getByText("Context · current location", { exact: true })).toBeVisible();
+
     expect(consoleErrors).toEqual([]);
     expect(pageErrors).toEqual([]);
   });

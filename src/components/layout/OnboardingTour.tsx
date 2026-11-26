@@ -11,27 +11,27 @@ const steps = [
   },
   {
     title: "Records",
-    body: "This pane lists the records currently in view. Each card is one place or artifact. Select a card to open its full context.",
+    body: "This pane lists the records currently in view. Each card is one place or artifact. Select a card (or press [ and ]) to move across records.",
     target: "feed",
   },
   {
     title: "Find something",
-    body: "Search titles, eras, and places. Scope, Type, and Era narrow the corpus. Filters live in the URL, so you can share the exact view you are looking at.",
+    body: "Press / to search titles, eras, and places, or toggle Then & Now to see archival photo comparisons. Filters and active records sync to the URL for sharing.",
     target: "search",
   },
   {
     title: "The map",
-    body: "The map plots origins and current locations. Filled dots are places, hollow rings are artifact origins, and blue rings are current holdings. Zoom or pan, then use “Search this map area” to limit the list to what you see.",
+    body: "The map plots origins and current locations. Filled dots are places, hollow rings are artifact origins, and blue rings are current holdings. Zoom, pan, or toggle “Area filter” directly on the map.",
     target: "map",
   },
   {
     title: "Open the context",
-    body: "Click any record card. On a phone, use the bottom tabs to move between Records, Map, and Context. The map will fly to the selected record when a coordinate is known.",
+    body: "Click any record card. On a phone, use the bottom tabs to move between Records, Map, and Context. The map flies smoothly to the selected record when a coordinate is known.",
     target: "records",
   },
   {
     title: "Inside the drawer",
-    body: "The context drawer holds the summary, image or evidence card, relationships, sources, and your private notes. “Draft · unreviewed” means the record has not been curated.",
+    body: "The context drawer holds the summary, Then-vs-Now comparison slider, relationships, citations, and your private notes. “Draft · unreviewed” means the record has not been curated yet.",
     target: "drawer",
   },
   {
@@ -46,11 +46,21 @@ const steps = [
   },
 ] as const;
 
-export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function OnboardingTour({
+  open,
+  onClose,
+  onStepChange,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onStepChange?: (stepIndex: number, target: string | null) => void;
+}) {
   const [step, setStep] = useState(0);
   const [spotlight, setSpotlight] = useState<DOMRect | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const onStepChangeRef = useRef(onStepChange);
+  onStepChangeRef.current = onStepChange;
 
   useEffect(() => {
     if (!open) return;
@@ -66,23 +76,33 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
       setSpotlight(null);
       return;
     }
+
+    const targetName = steps[step].target;
+    onStepChangeRef.current?.(step, targetName);
+
     const update = () => {
-      const targetName = steps[step].target;
       const target = targetName
         ? document.querySelector<HTMLElement>(`[data-tour="${targetName}"]`)
         : null;
-      setSpotlight(target ? target.getBoundingClientRect() : null);
+      if (target && window.getComputedStyle(target).display !== "none") {
+        setSpotlight(target.getBoundingClientRect());
+      } else {
+        setSpotlight(null);
+      }
     };
+
     update();
-    const targetName = steps[step].target;
     if (targetName) {
       document
         .querySelector<HTMLElement>(`[data-tour="${targetName}"]`)
         ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     }
+    const raf = window.requestAnimationFrame(update);
+
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
+      window.cancelAnimationFrame(raf);
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
@@ -169,7 +189,7 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
             back();
           }
         }}
-        className="fixed bottom-[calc(3.75rem+env(safe-area-inset-bottom))] left-1/2 z-[70] max-h-[calc(100dvh-6rem)] w-[min(92vw,420px)] -translate-x-1/2 overflow-y-auto border border-ochre bg-sheet p-4 shadow-[0_12px_32px_rgba(29,28,25,0.18)] md:bottom-4 md:left-4 md:max-h-[calc(100dvh-2rem)] md:translate-x-0"
+        className="fixed bottom-[calc(3.75rem+env(safe-area-inset-bottom))] left-1/2 z-[70] max-h-[calc(100dvh-6rem)] w-[min(92vw,420px)] -translate-x-1/2 overflow-y-auto border-2 border-ochre bg-sheet p-4 md:bottom-4 md:left-4 md:max-h-[calc(100dvh-2rem)] md:translate-x-0"
       >
         <div className="mb-2 flex items-center justify-between gap-3">
           <span className="caption-label">

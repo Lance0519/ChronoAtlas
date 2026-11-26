@@ -1,12 +1,18 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Check,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
   Eraser,
   ExternalLink,
   FileClock,
+  Link2,
   RefreshCw,
+  Route,
   X,
 } from "lucide-react";
 import { useAtlas } from "../../app/hooks/useAtlas";
@@ -25,12 +31,34 @@ interface ContextDrawerProps {
   activeEntryState?: ActiveEntryState;
   corpusRevision?: number;
   onOpenAuth?: () => void;
+  onPrevEntry?: () => void;
+  onNextEntry?: () => void;
+  hasPrevEntry?: boolean;
+  hasNextEntry?: boolean;
+  onViewFullJourney?: () => void;
+}
+
+async function copyTextSafe(value: string): Promise<boolean> {
+  try {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // Clipboard access can be restricted in headless or non-HTTPS contexts.
+  }
+  return false;
 }
 
 export function ContextDrawer({
   activeEntryState,
   corpusRevision = 0,
   onOpenAuth,
+  onPrevEntry,
+  onNextEntry,
+  hasPrevEntry = false,
+  hasNextEntry = false,
+  onViewFullJourney,
 }: ContextDrawerProps = {}) {
   const { state, dispatch } = useAtlas();
   const { session, canCurate } = useAuthSession();
@@ -43,6 +71,18 @@ export function ContextDrawer({
 
   const [reviewBusy, setReviewBusy] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
+
+  const currentEntryId = entry?.id ?? null;
+
+  useEffect(() => {
+    setLinkCopied(false);
+    setReviewError(null);
+    if (scrollBodyRef.current) {
+      scrollBodyRef.current.scrollTop = 0;
+    }
+  }, [currentEntryId]);
 
   if (!state.activeEntryId) {
     return (
@@ -161,6 +201,15 @@ export function ContextDrawer({
     }
   };
 
+  const handleCopyShareLink = async () => {
+    if (typeof window === "undefined") return;
+    const ok = await copyTextSafe(window.location.href);
+    if (ok) {
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 1800);
+    }
+  };
+
   return (
     <section
       aria-label="Context drawer"
@@ -175,22 +224,63 @@ export function ContextDrawer({
             </p>
             <h2 className="mt-1 font-display text-[34px] leading-[1.05] text-ink">{entry.title}</h2>
           </div>
-          <div className="mt-1 flex shrink-0 items-center gap-1.5">
+          <div className="mt-1 flex shrink-0 items-center gap-1">
+            {(onPrevEntry || onNextEntry) && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Previous record"
+                  title="Previous record ([)"
+                  disabled={!hasPrevEntry}
+                  onClick={onPrevEntry}
+                  className="grid size-11 place-items-center border border-rule text-muted transition-colors duration-150 hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-35 md:size-8"
+                >
+                  <ChevronLeft aria-hidden="true" size={16} strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next record"
+                  title="Next record (])"
+                  disabled={!hasNextEntry}
+                  onClick={onNextEntry}
+                  className="grid size-11 place-items-center border border-rule text-muted transition-colors duration-150 hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-35 md:size-8"
+                >
+                  <ChevronRight aria-hidden="true" size={16} strokeWidth={1.5} />
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              aria-label="Copy link to record"
+              title={linkCopied ? "Link copied" : "Copy link to record"}
+              onClick={() => void handleCopyShareLink()}
+              className={`grid size-11 place-items-center border transition-colors duration-150 md:size-8 ${
+                linkCopied
+                  ? "border-ochre text-ochre"
+                  : "border-rule text-muted hover:border-ink hover:text-ink"
+              }`}
+            >
+              {linkCopied ? (
+                <Check aria-hidden="true" size={15} strokeWidth={1.5} />
+              ) : (
+                <Link2 aria-hidden="true" size={15} strokeWidth={1.5} />
+              )}
+            </button>
             <button
               type="button"
               aria-label="Clear selection"
               title="Clear selection"
               onClick={() => dispatch({ type: "clearSelection" })}
-              className="grid size-11 place-items-center border border-rule text-muted hover:border-ink hover:text-ink md:size-8"
+              className="grid size-11 place-items-center border border-rule text-muted transition-colors duration-150 hover:border-ink hover:text-ink md:size-8"
             >
               <Eraser aria-hidden="true" size={16} strokeWidth={1.5} />
             </button>
             <button
               type="button"
               aria-label="Close context drawer"
-              title="Close context drawer"
+              title="Close context drawer (Esc)"
               onClick={() => dispatch({ type: "closeDrawer" })}
-              className="grid size-11 place-items-center border border-rule text-muted hover:border-ink hover:text-ink md:size-8"
+              className="grid size-11 place-items-center border border-rule text-muted transition-colors duration-150 hover:border-ink hover:text-ink md:size-8"
             >
               <X aria-hidden="true" size={16} strokeWidth={1.5} />
             </button>
@@ -215,7 +305,7 @@ export function ContextDrawer({
               type="button"
               disabled={reviewBusy}
               onClick={() => void handleToggleReviewed()}
-              className="border border-rule bg-paper px-2 py-0.5 text-[11px] text-ink hover:border-ink disabled:opacity-50"
+              className="border border-rule bg-paper px-2 py-0.5 text-[11px] text-ink transition-colors duration-150 hover:border-ink disabled:opacity-50"
             >
               {reviewBusy ? "Updating…" : entry.reviewed ? "Mark as draft" : "Mark as reviewed"}
             </button>
@@ -230,8 +320,11 @@ export function ContextDrawer({
 
       {error && <ErrorMessage onRetry={retry}>{error}</ErrorMessage>}
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
-        <Metadata entry={entry} />
+      <div
+        ref={scrollBodyRef}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4"
+      >
+        <Metadata entry={entry} onViewFullJourney={onViewFullJourney} />
         <PhotoGallery
           key={entry.id}
           entryId={entry.id}
@@ -253,14 +346,20 @@ export function ContextDrawer({
         </section>
 
         <Relationships links={links} />
-        <Sources sources={sources} />
+        <Sources entryTitle={entry.title} sources={sources} />
         <ProgressPanel entryId={entry.id} session={session} onOpenAuth={onOpenAuth} />
       </div>
     </section>
   );
 }
 
-function Metadata({ entry }: { entry: HistoricalEntry }) {
+function Metadata({
+  entry,
+  onViewFullJourney,
+}: {
+  entry: HistoricalEntry;
+  onViewFullJourney?: () => void;
+}) {
   const { state, dispatch } = useAtlas();
   const role = entry.entryType === "artifact" ? "Artifact" : "Place";
   const isRelocated = entry.entryType === "artifact" && entry.current !== null;
@@ -334,12 +433,16 @@ function Metadata({ entry }: { entry: HistoricalEntry }) {
       </dl>
 
       {isRelocated && (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             aria-pressed={state.activeLocationRole === "origin"}
             onClick={() => dispatch({ type: "setRole", role: "origin" })}
-            className={`min-h-11 border px-3 py-1 text-[11px] md:min-h-0 md:px-2 ${state.activeLocationRole === "origin" ? "border-ochre text-ochre" : "border-rule text-muted hover:text-ink"}`}
+            className={`min-h-11 border px-3 py-1 text-[11px] transition-colors duration-150 md:min-h-0 md:px-2 ${
+              state.activeLocationRole === "origin"
+                ? "border-ochre bg-paper text-ochre"
+                : "border-rule text-muted hover:border-ink hover:text-ink"
+            }`}
           >
             Go to origin
           </button>
@@ -347,10 +450,24 @@ function Metadata({ entry }: { entry: HistoricalEntry }) {
             type="button"
             aria-pressed={state.activeLocationRole === "current"}
             onClick={() => dispatch({ type: "setRole", role: "current" })}
-            className={`min-h-11 border px-3 py-1 text-[11px] md:min-h-0 md:px-2 ${state.activeLocationRole === "current" ? "border-ochre text-ochre" : "border-rule text-muted hover:text-ink"}`}
+            className={`min-h-11 border px-3 py-1 text-[11px] transition-colors duration-150 md:min-h-0 md:px-2 ${
+              state.activeLocationRole === "current"
+                ? "border-ochre bg-paper text-ochre"
+                : "border-rule text-muted hover:border-ink hover:text-ink"
+            }`}
           >
             Go to current location
           </button>
+          {onViewFullJourney && entry.origin && entry.current && (
+            <button
+              type="button"
+              onClick={onViewFullJourney}
+              className="inline-flex min-h-11 items-center gap-1 border border-harbor/60 bg-paper px-3 py-1 text-[11px] text-harbor transition-colors duration-150 hover:border-harbor md:min-h-0 md:px-2"
+            >
+              <Route aria-hidden="true" size={11} strokeWidth={1.5} />
+              View full journey
+            </button>
+          )}
         </div>
       )}
     </section>
@@ -379,7 +496,7 @@ function Relationships({ links }: { links: DirectedEntryLink[] }) {
       {links.length === 0 ? (
         <p className="mt-2 text-sm text-muted">No relationships are recorded.</p>
       ) : (
-        <ul className="mt-2 space-y-3">
+        <ul className="mt-2 space-y-2">
           {links.map((link) => {
             const otherId = link.direction === "out" ? link.targetId : link.sourceId;
             const other = getEntry(otherId);
@@ -393,7 +510,7 @@ function Relationships({ links }: { links: DirectedEntryLink[] }) {
                       dispatch({ type: "selectEntry", id: other.id, role: "origin" });
                     }
                   }}
-                  className="flex w-full items-start gap-2 text-left text-xs hover:underline disabled:cursor-default disabled:no-underline"
+                  className="flex w-full items-start gap-2 border border-transparent px-2 py-1.5 -mx-2 text-left text-xs transition-colors duration-150 hover:border-rule hover:bg-paper disabled:cursor-default disabled:hover:border-transparent disabled:hover:bg-transparent"
                 >
                   {link.direction === "out" ? (
                     <ArrowUpRight
@@ -418,7 +535,9 @@ function Relationships({ links }: { links: DirectedEntryLink[] }) {
                       {formatRelType(link.relationshipType)}
                     </span>{" "}
                     <span>{link.relationshipLabel}: </span>
-                    <span className="text-ochre">{other ? other.title : `Record ${otherId}`}</span>
+                    <span className="font-medium text-ochre">
+                      {other ? other.title : `Record ${otherId}`}
+                    </span>
                     {link.description && (
                       <span className="mt-0.5 block text-[11px] text-muted">
                         {link.description}
@@ -435,7 +554,25 @@ function Relationships({ links }: { links: DirectedEntryLink[] }) {
   );
 }
 
-function Sources({ sources }: { sources: SourceRef[] }) {
+function Sources({ entryTitle, sources }: { entryTitle: string; sources: SourceRef[] }) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyCitation = async (source: SourceRef) => {
+    const parts = [
+      `"${source.title || entryTitle}."`,
+      source.publisher ? `${source.publisher}.` : null,
+      source.accessedAt ? `Accessed ${source.accessedAt}.` : null,
+      source.url || null,
+    ].filter(Boolean);
+    const ok = await copyTextSafe(parts.join(" "));
+    if (ok) {
+      setCopiedId(source.id);
+      window.setTimeout(() => {
+        setCopiedId((current) => (current === source.id ? null : current));
+      }, 1800);
+    }
+  };
+
   return (
     <section className="border-b border-rule py-4">
       <h3 className="caption-label">Sources</h3>
@@ -445,18 +582,38 @@ function Sources({ sources }: { sources: SourceRef[] }) {
         <ul className="mt-2 space-y-3">
           {sources.map((source) => (
             <li key={source.id} className="text-xs">
-              {isSafeExternalUrl(source.url) ? (
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-ochre underline underline-offset-2 hover:text-ink"
+              <div className="flex items-start justify-between gap-2">
+                {isSafeExternalUrl(source.url) ? (
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-ochre underline underline-offset-2 hover:text-ink"
+                  >
+                    {source.title} <ExternalLink aria-hidden="true" size={11} strokeWidth={1.5} />
+                  </a>
+                ) : (
+                  <span className="font-medium text-ink">{source.title}</span>
+                )}
+                <button
+                  type="button"
+                  aria-label={`Copy citation for ${source.title}`}
+                  onClick={() => void handleCopyCitation(source)}
+                  className="inline-flex shrink-0 items-center gap-1 border border-rule px-1.5 py-0.5 text-[10px] text-muted transition-colors duration-150 hover:border-ink hover:text-ink"
                 >
-                  {source.title} <ExternalLink aria-hidden="true" size={11} strokeWidth={1.5} />
-                </a>
-              ) : (
-                <span className="font-medium text-ink">{source.title}</span>
-              )}
+                  {copiedId === source.id ? (
+                    <>
+                      <Check aria-hidden="true" size={10} strokeWidth={1.5} />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy aria-hidden="true" size={10} strokeWidth={1.5} />
+                      Cite
+                    </>
+                  )}
+                </button>
+              </div>
               <p className="text-muted">
                 {source.publisher}
                 {source.sourceType ? ` · ${source.sourceType}` : ""}
@@ -565,7 +722,7 @@ function ProgressPanel({
             ? "What did you notice here? (Autosaves after pause)"
             : "Sign in to record private notes"
         }
-        className="mt-1 w-full resize-y border border-rule bg-paper px-3 py-2 text-sm placeholder:text-muted/70 focus:border-ochre disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-1 w-full resize-y border border-rule bg-paper px-3 py-2 text-sm transition-colors duration-150 placeholder:text-muted/70 focus:border-ochre disabled:cursor-not-allowed disabled:opacity-60"
       />
 
       <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px]">
